@@ -1,9 +1,10 @@
-# CSV翻訳プログラム設定ファイル
+# AIWolf LLM Judge 設定ファイル
 
 path:
   env: config/.env
+  evaluation_criteria: config/evaluation_criteria.yaml
 
-# 翻訳設定
+# LLM設定
 llm:
   prompt_yml: config/prompt.yaml
   model: "gpt-5"
