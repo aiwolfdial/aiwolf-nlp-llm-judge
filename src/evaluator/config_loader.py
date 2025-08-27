@@ -2,11 +2,76 @@ import yaml
 from pathlib import Path
 from typing import Dict, List
 
-from ..models.evaluation import EvaluationConfig, EvaluationCriteria, GameFormat
+from ..models.evaluation import EvaluationConfig, EvaluationCriteria
+from ..models.game import ParticipantNum, GameFormat
 
 
 class ConfigLoader:
     """評価設定ファイルを読み込むクラス"""
+
+    @staticmethod
+    def load_participant_num(settings_path: Path) -> ParticipantNum:
+        """settings.yamlから対戦人数設定を読み込む
+
+        Args:
+            settings_path: settings.yamlファイルのパス
+
+        Returns:
+            ParticipantNum: 読み込まれた対戦人数
+
+        Raises:
+            FileNotFoundError: 設定ファイルが見つからない場合
+            ValueError: 設定ファイルの形式が不正な場合
+        """
+        if not settings_path.exists():
+            raise FileNotFoundError(f"Settings file not found: {settings_path}")
+
+        try:
+            with settings_path.open("r", encoding="utf-8") as f:
+                settings_data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML format in settings: {e}")
+
+        # 対戦人数設定を取得
+        participant_num_str = settings_data.get("game", {}).get(
+            "participant_num", "5_player"
+        )
+
+        try:
+            return ParticipantNum(participant_num_str)
+        except ValueError:
+            raise ValueError(f"Unknown participant number: {participant_num_str}")
+
+    @staticmethod
+    def load_game_format(settings_path: Path) -> GameFormat:
+        """settings.yamlからゲーム形式設定を読み込む
+
+        Args:
+            settings_path: settings.yamlファイルのパス
+
+        Returns:
+            GameFormat: 読み込まれたゲーム形式
+
+        Raises:
+            FileNotFoundError: 設定ファイルが見つからない場合
+            ValueError: 設定ファイルの形式が不正な場合
+        """
+        if not settings_path.exists():
+            raise FileNotFoundError(f"Settings file not found: {settings_path}")
+
+        try:
+            with settings_path.open("r", encoding="utf-8") as f:
+                settings_data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML format in settings: {e}")
+
+        # ゲーム形式設定を取得
+        game_format_str = settings_data.get("game", {}).get("format", "main_match")
+
+        try:
+            return GameFormat(game_format_str)
+        except ValueError:
+            raise ValueError(f"Unknown game format: {game_format_str}")
 
     @staticmethod
     def load_from_settings(settings_path: Path) -> EvaluationConfig:
@@ -75,14 +140,16 @@ class ConfigLoader:
         game_specific_criteria = {}
         specific_data = config_data.get("game_specific_criteria", {})
 
-        for game_format_str, criteria_list in specific_data.items():
+        for participant_num_str, criteria_list in specific_data.items():
             try:
-                game_format = GameFormat(game_format_str)
-                game_specific_criteria[game_format] = ConfigLoader._load_criteria_list(
-                    criteria_list
+                participant_num = ParticipantNum(participant_num_str)
+                game_specific_criteria[participant_num] = (
+                    ConfigLoader._load_criteria_list(criteria_list)
                 )
             except ValueError:
-                raise ValueError(f"Unknown game format: {game_format_str}")
+                raise ValueError(
+                    f"Unknown participant number format: {participant_num_str}"
+                )
 
         return EvaluationConfig(
             common_criteria=common_criteria,

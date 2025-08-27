@@ -2,18 +2,20 @@ import csv
 from pathlib import Path
 from typing import Set
 
-from ..models.evaluation import GameFormat, GameInfo
+from ..models.game import ParticipantNum, GameInfo
+from .config_loader import ConfigLoader
 
 
 class GameDetector:
     """CSVファイルからゲーム形式を検出するクラス"""
 
     @staticmethod
-    def detect_game_format(csv_path: Path) -> GameInfo:
+    def detect_game_format(csv_path: Path, settings_path: Path) -> GameInfo:
         """CSVファイルからゲーム形式を検出
 
         Args:
             csv_path: CSVファイルのパス
+            settings_path: 設定ファイルのパス
 
         Returns:
             GameInfo: 検出されたゲーム情報
@@ -25,19 +27,23 @@ class GameDetector:
         if not csv_path.exists():
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
-        player_indices = GameDetector._extract_player_indices(csv_path)
-        player_count = len(player_indices)
+        # 設定ファイルから対戦人数とゲーム形式を読み込み
+        participant_num = ConfigLoader.load_participant_num(settings_path)
+        game_format = ConfigLoader.load_game_format(settings_path)
 
-        # プレイヤー数に基づいてゲーム形式を判定
-        if player_count == 5:
-            game_format = GameFormat.FIVE_PLAYER
-        elif player_count == 13:
-            game_format = GameFormat.THIRTEEN_PLAYER
+        # 設定に基づいたプレイヤー数を取得
+        if participant_num == ParticipantNum.FIVE_PLAYER:
+            expected_player_count = 5
+        elif participant_num == ParticipantNum.THIRTEEN_PLAYER:
+            expected_player_count = 13
         else:
-            raise ValueError(f"Unsupported player count: {player_count}")
+            raise ValueError(f"Unknown participant number: {participant_num}")
 
         return GameInfo(
-            format=game_format, player_count=player_count, game_id=csv_path.stem
+            participant_num=participant_num,
+            game_format=game_format,
+            player_count=expected_player_count,
+            game_id=csv_path.stem,
         )
 
     @staticmethod

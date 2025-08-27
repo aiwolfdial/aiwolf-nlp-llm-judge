@@ -9,6 +9,11 @@ llm:
   prompt_yml: config/prompt.yaml
   model: "gpt-5"
 
+# ゲーム形式設定
+game:
+  format: "main_match"  # main_match または self_match
+  participant_num: "5_player"  # 5_player または 13_player
+
 # 処理設定
 processing:
   input_dir: "data/input"    # 入力ディレクトリ
