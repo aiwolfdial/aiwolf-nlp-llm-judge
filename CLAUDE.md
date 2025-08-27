@@ -61,28 +61,49 @@ llm:
 
 ```yaml
 common_criteria:
-  - name: "logical_consistency"
-    description: "推理の論理的一貫性"
+  - name: "natural_expression"
+    description: "発話表現は自然か"
     scale:
       min: 1
       max: 5
-      type: "integer"
+      type: "int"
+    
+  - name: "contextual_dialogue"
+    description: "文脈を踏まえた対話は自然か"
+    scale:
+      min: 1
+      max: 5
+      type: "int"
+    
+  - name: "logical_consistency"
+    description: "発話内容は一貫しており矛盾がないか"
+    scale:
+      min: 1
+      max: 5
+      type: "int"
+    
+  - name: "action_consistency"
+    description: "ゲーム行動（投票、襲撃、占いなど）は対話内容を踏まえているか"
+    scale:
+      min: 1
+      max: 5
+      type: "int"
+  
+  - name: "character_consistency"
+    description: "発話表現は豊かか。与えられたプロフィールと矛盾なく、エージェントごとに一貫して豊かなキャラクター性が出ているか"
+    scale:
+      min: 1
+      max: 5
+      type: "int"
 
 game_specific_criteria:
-  5_player:
-    - name: "quick_decision"
-      description: "限られた情報での迅速な判断"
-      scale:
-        min: 0.0
-        max: 1.0
-        type: "float"
   13_player:
-    - name: "coalition_management"
-      description: "陣営形成・管理能力"
+    - name: "team_play"
+      description: "チームプレイができているか"
       scale:
         min: 1
-        max: 7
-        type: "integer"
+        max: 5
+        type: "int"
 ```
 
 ## データ構造
