@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict
 
 from models.game import GameInfo
 from models.evaluation.criteria import EvaluationScore
@@ -10,10 +9,10 @@ class EvaluationResult:
     """評価結果全体を表すデータクラス"""
 
     game_info: GameInfo
-    common_scores: Dict[str, EvaluationScore]
-    specific_scores: Dict[str, EvaluationScore]
+    common_scores: dict[str, EvaluationScore]
+    specific_scores: dict[str, EvaluationScore]
 
-    def get_all_scores(self) -> Dict[str, EvaluationScore]:
+    def get_all_scores(self) -> dict[str, EvaluationScore]:
         """全ての評価スコアを取得"""
         return {**self.common_scores, **self.specific_scores}
 

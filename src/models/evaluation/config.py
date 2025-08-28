@@ -1,25 +1,19 @@
-from dataclasses import dataclass
-from typing import List, Dict
-
 from models.game import ParticipantNum
 from models.evaluation.criteria import EvaluationCriteria
 
 
-@dataclass
-class EvaluationConfig:
-    """評価設定を表すデータクラス"""
-
-    common_criteria: List[EvaluationCriteria]
-    game_specific_criteria: Dict[ParticipantNum, List[EvaluationCriteria]]
+class EvaluationConfig(list[EvaluationCriteria]):
+    """評価設定を表すクラス（EvaluationCriteriaのリストを継承）"""
 
     def get_criteria_for_game(
         self, participant_num: ParticipantNum
-    ) -> List[EvaluationCriteria]:
-        """指定された参加人数の全評価基準を取得"""
-        criteria = self.common_criteria.copy()
-        if participant_num in self.game_specific_criteria:
-            criteria.extend(self.game_specific_criteria[participant_num])
-        return criteria
+    ) -> list[EvaluationCriteria]:
+        """指定された参加人数の評価基準を取得"""
+        return [
+            criteria
+            for criteria in self
+            if participant_num in criteria.applicable_games
+        ]
 
     def get_criteria_by_name(
         self, criteria_name: str, participant_num: ParticipantNum

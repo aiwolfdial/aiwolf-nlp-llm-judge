@@ -1,6 +1,5 @@
 import yaml
 from pathlib import Path
-from typing import Dict, List
 
 from models.evaluation import EvaluationConfig, EvaluationCriteria, ScoreType
 from models.game import ParticipantNum, GameFormat
@@ -131,80 +130,79 @@ class ConfigLoader:
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML format: {e}")
 
+        # 全評価基準を統合したリストを作成
+        all_criteria = []
+
         # 共通評価基準の読み込み
-        common_criteria = ConfigLoader._load_criteria_list(
-            config_data.get("common_criteria", [])
-        )
+        common_criteria_data = config_data.get("common_criteria", [])
+        for criteria_dict in common_criteria_data:
+            criteria = ConfigLoader._load_criteria_dict(
+                criteria_dict,
+                [ParticipantNum.FIVE_PLAYER, ParticipantNum.THIRTEEN_PLAYER],
+            )
+            all_criteria.append(criteria)
 
         # ゲーム固有評価基準の読み込み
-        game_specific_criteria = {}
         specific_data = config_data.get("game_specific_criteria", {})
 
         for participant_num_str, criteria_list in specific_data.items():
             try:
                 participant_num = ParticipantNum(participant_num_str)
-                game_specific_criteria[participant_num] = (
-                    ConfigLoader._load_criteria_list(criteria_list)
-                )
+                for criteria_dict in criteria_list:
+                    criteria = ConfigLoader._load_criteria_dict(
+                        criteria_dict, [participant_num]
+                    )
+                    all_criteria.append(criteria)
             except ValueError:
                 raise ValueError(
                     f"Unknown participant number format: {participant_num_str}"
                 )
 
-        return EvaluationConfig(
-            common_criteria=common_criteria,
-            game_specific_criteria=game_specific_criteria,
-        )
+        return EvaluationConfig(all_criteria)
 
     @staticmethod
-    def _load_criteria_list(criteria_data: List[Dict]) -> List[EvaluationCriteria]:
-        """評価基準リストを読み込む
+    def _load_criteria_dict(
+        criteria_dict: dict, applicable_games: list[ParticipantNum]
+    ) -> EvaluationCriteria:
+        """評価基準辞書を読み込んでEvaluationCriteriaオブジェクトを作成
 
         Args:
-            criteria_data: YAML から読み込まれた評価基準データ
+            criteria_dict: YAML から読み込まれた評価基準データ
+            applicable_games: この基準が適用されるゲーム形式のリスト
 
         Returns:
-            List[EvaluationCriteria]: 評価基準のリスト
+            EvaluationCriteria: 評価基準オブジェクト
 
         Raises:
             ValueError: 設定データが不正な場合
         """
-        criteria_list = []
+        try:
+            name = criteria_dict["name"]
+            description = criteria_dict["description"]
+            scale = criteria_dict["scale"]
 
-        for criteria_dict in criteria_data:
-            try:
-                name = criteria_dict["name"]
-                description = criteria_dict["description"]
-                scale = criteria_dict["scale"]
+            min_value = scale["min"]
+            max_value = scale["max"]
+            score_type = scale["type"]
 
-                min_value = scale["min"]
-                max_value = scale["max"]
-                score_type = scale["type"]
+            # 文字列をScoreType enumに変換
+            if score_type == "integer" or score_type == "int":
+                score_type_enum = ScoreType.INT
+            elif score_type == "float":
+                score_type_enum = ScoreType.FLOAT
+            else:
+                raise ValueError(f"Invalid score type: {score_type}")
 
-                # 文字列をScoreType enumに変換
-                try:
-                    if score_type == "integer" or score_type == "int":
-                        score_type_enum = ScoreType.INT
-                    elif score_type == "float":
-                        score_type_enum = ScoreType.FLOAT
-                    else:
-                        raise ValueError(f"Invalid score type: {score_type}")
-                except ValueError:
-                    raise ValueError(f"Invalid score type: {score_type}")
+            return EvaluationCriteria(
+                name=name,
+                description=description,
+                min_value=min_value,
+                max_value=max_value,
+                score_type=score_type_enum,
+                applicable_games=applicable_games,
+            )
 
-                criteria = EvaluationCriteria(
-                    name=name,
-                    description=description,
-                    min_value=min_value,
-                    max_value=max_value,
-                    score_type=score_type_enum,
-                )
-
-                criteria_list.append(criteria)
-
-            except KeyError as e:
-                raise ValueError(f"Missing required field in criteria: {e}")
-            except (TypeError, ValueError) as e:
-                raise ValueError(f"Invalid criteria data: {e}")
-
-        return criteria_list
+        except KeyError as e:
+            raise ValueError(f"Missing required field in criteria: {e}")
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid criteria data: {e}")

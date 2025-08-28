@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict
 
 from models.game import GameInfo
 from models.evaluation import (
@@ -36,7 +35,7 @@ class BaseEvaluator(ABC):
         pass
 
     def _create_evaluation_result(
-        self, game_info: GameInfo, scores: Dict[str, float]
+        self, game_info: GameInfo, scores: dict[str, float]
     ) -> EvaluationResult:
         """評価結果オブジェクトを作成
 
@@ -54,7 +53,15 @@ class BaseEvaluator(ABC):
         specific_scores = {}
 
         # 共通基準と固有基準を分離
-        common_criteria_names = {c.name for c in self.config.common_criteria}
+        # 全ゲーム形式に適用される基準を共通基準とする
+        from models.game import ParticipantNum
+
+        all_games = [ParticipantNum.FIVE_PLAYER, ParticipantNum.THIRTEEN_PLAYER]
+        common_criteria_names = {
+            c.name
+            for c in self.config
+            if all(game in c.applicable_games for game in all_games)
+        }
 
         for criteria in all_criteria:
             if criteria.name not in scores:
@@ -87,7 +94,7 @@ class BaseEvaluator(ABC):
             specific_scores=specific_scores,
         )
 
-    def _validate_scores(self, scores: Dict[str, float], game_info: GameInfo) -> None:
+    def _validate_scores(self, scores: dict[str, float], game_info: GameInfo) -> None:
         """スコアの妥当性をチェック
 
         Args:

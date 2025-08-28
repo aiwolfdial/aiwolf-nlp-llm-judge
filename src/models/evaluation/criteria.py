@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
+from models.game import ParticipantNum
+
 
 class ScoreType(Enum):
     """評価スコアの型を表す列挙型"""
@@ -18,6 +20,7 @@ class EvaluationCriteria:
     min_value: int | float
     max_value: int | float
     score_type: ScoreType
+    applicable_games: list[ParticipantNum]
 
 
 @dataclass

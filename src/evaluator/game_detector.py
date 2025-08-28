@@ -1,6 +1,5 @@
 import csv
 from pathlib import Path
-from typing import Set
 
 from models.game import ParticipantNum, GameInfo
 from .config_loader import ConfigLoader
@@ -47,14 +46,14 @@ class GameDetector:
         )
 
     @staticmethod
-    def _extract_player_indices(csv_path: Path) -> Set[str]:
+    def _extract_player_indices(csv_path: Path) -> set[str]:
         """CSVファイルからプレイヤーインデックスを抽出
 
         Args:
             csv_path: CSVファイルのパス
 
         Returns:
-            Set[str]: プレイヤーインデックスのセット
+            set[str]: プレイヤーインデックスのセット
         """
         player_indices = set()
 
