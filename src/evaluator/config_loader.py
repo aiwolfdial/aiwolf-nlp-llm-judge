@@ -2,7 +2,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, List
 
-from ..models.evaluation import EvaluationConfig, EvaluationCriteria
+from ..models.evaluation import EvaluationConfig, EvaluationCriteria, ScoreType
 from ..models.game import ParticipantNum, GameFormat
 
 
@@ -181,7 +181,15 @@ class ConfigLoader:
                 max_value = scale["max"]
                 score_type = scale["type"]
 
-                if score_type not in ["integer", "float"]:
+                # 文字列をScoreType enumに変換
+                try:
+                    if score_type == "integer" or score_type == "int":
+                        score_type_enum = ScoreType.INT
+                    elif score_type == "float":
+                        score_type_enum = ScoreType.FLOAT
+                    else:
+                        raise ValueError(f"Invalid score type: {score_type}")
+                except ValueError:
                     raise ValueError(f"Invalid score type: {score_type}")
 
                 criteria = EvaluationCriteria(
@@ -189,7 +197,7 @@ class ConfigLoader:
                     description=description,
                     min_value=min_value,
                     max_value=max_value,
-                    score_type=score_type,
+                    score_type=score_type_enum,
                 )
 
                 criteria_list.append(criteria)

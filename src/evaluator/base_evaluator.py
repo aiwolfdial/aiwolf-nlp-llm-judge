@@ -7,6 +7,7 @@ from ..models.evaluation import (
     EvaluationConfig,
     GameInfo,
     EvaluationScore,
+    ScoreType,
 )
 
 
@@ -62,7 +63,7 @@ class BaseEvaluator(ABC):
             score_value = scores[criteria.name]
 
             # 型変換
-            if criteria.score_type == "integer":
+            if criteria.score_type == ScoreType.INT:
                 score_value = int(score_value)
             else:
                 score_value = float(score_value)
