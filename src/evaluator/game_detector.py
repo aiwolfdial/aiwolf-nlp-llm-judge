@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 
-from models.game import ParticipantNum, GameInfo
+from models.game import GameInfo
 from .config_loader import ConfigLoader
 
 
@@ -26,22 +26,13 @@ class GameDetector:
         if not csv_path.exists():
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
-        # 設定ファイルから対戦人数とゲーム形式を読み込み
-        participant_num = ConfigLoader.load_participant_num(settings_path)
+        # 設定ファイルからプレイヤー数とゲーム形式を読み込み
+        player_count = ConfigLoader.load_player_count(settings_path)
         game_format = ConfigLoader.load_game_format(settings_path)
 
-        # 設定に基づいたプレイヤー数を取得
-        if participant_num == ParticipantNum.FIVE_PLAYER:
-            expected_player_count = 5
-        elif participant_num == ParticipantNum.THIRTEEN_PLAYER:
-            expected_player_count = 13
-        else:
-            raise ValueError(f"Unknown participant number: {participant_num}")
-
         return GameInfo(
-            participant_num=participant_num,
             game_format=game_format,
-            player_count=expected_player_count,
+            player_count=player_count,
             game_id=csv_path.stem,
         )
 

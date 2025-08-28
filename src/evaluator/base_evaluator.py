@@ -46,21 +46,19 @@ class BaseEvaluator(ABC):
         Returns:
             EvaluationResult: 作成された評価結果
         """
-        # 該当参加人数の全評価基準を取得
-        all_criteria = self.config.get_criteria_for_game(game_info.participant_num)
+        # 該当プレイヤー数の全評価基準を取得
+        all_criteria = self.config.get_criteria_for_game(game_info.player_count)
 
         common_scores = {}
         specific_scores = {}
 
         # 共通基準と固有基準を分離
-        # 全ゲーム形式に適用される基準を共通基準とする
-        from models.game import ParticipantNum
-
-        all_games = [ParticipantNum.FIVE_PLAYER, ParticipantNum.THIRTEEN_PLAYER]
+        # 全プレイヤー数に適用される基準を共通基準とする
+        all_player_counts = [5, 13]
         common_criteria_names = {
             c.name
             for c in self.config
-            if all(game in c.applicable_games for game in all_games)
+            if all(count in c.applicable_games for count in all_player_counts)
         }
 
         for criteria in all_criteria:
@@ -104,7 +102,7 @@ class BaseEvaluator(ABC):
         Raises:
             ValueError: スコアが不正な場合
         """
-        expected_criteria = self.config.get_criteria_for_game(game_info.participant_num)
+        expected_criteria = self.config.get_criteria_for_game(game_info.player_count)
         expected_names = {c.name for c in expected_criteria}
 
         # 不足している基準をチェック

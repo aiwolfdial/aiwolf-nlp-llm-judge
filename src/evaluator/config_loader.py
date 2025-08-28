@@ -2,21 +2,21 @@ import yaml
 from pathlib import Path
 
 from models.evaluation import EvaluationConfig, EvaluationCriteria, ScoreType
-from models.game import ParticipantNum, GameFormat
+from models.game import GameFormat
 
 
 class ConfigLoader:
     """評価設定ファイルを読み込むクラス"""
 
     @staticmethod
-    def load_participant_num(settings_path: Path) -> ParticipantNum:
-        """settings.yamlから対戦人数設定を読み込む
+    def load_player_count(settings_path: Path) -> int:
+        """settings.yamlからプレイヤー数を読み込む
 
         Args:
             settings_path: settings.yamlファイルのパス
 
         Returns:
-            ParticipantNum: 読み込まれた対戦人数
+            int: 読み込まれたプレイヤー数
 
         Raises:
             FileNotFoundError: 設定ファイルが見つからない場合
@@ -31,15 +31,13 @@ class ConfigLoader:
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML format in settings: {e}")
 
-        # 対戦人数設定を取得
-        participant_num_str = settings_data.get("game", {}).get(
-            "participant_num", "5_player"
-        )
+        # プレイヤー数設定を取得
+        player_count = settings_data.get("game", {}).get("player_count", 5)
 
-        try:
-            return ParticipantNum(participant_num_str)
-        except ValueError:
-            raise ValueError(f"Unknown participant number: {participant_num_str}")
+        if not isinstance(player_count, int) or player_count <= 0:
+            raise ValueError(f"Invalid player count: {player_count}")
+
+        return player_count
 
     @staticmethod
     def load_game_format(settings_path: Path) -> GameFormat:
@@ -138,37 +136,35 @@ class ConfigLoader:
         for criteria_dict in common_criteria_data:
             criteria = ConfigLoader._load_criteria_dict(
                 criteria_dict,
-                [ParticipantNum.FIVE_PLAYER, ParticipantNum.THIRTEEN_PLAYER],
+                [5, 13],  # 全プレイヤー数に適用
             )
             all_criteria.append(criteria)
 
         # ゲーム固有評価基準の読み込み
         specific_data = config_data.get("game_specific_criteria", {})
 
-        for participant_num_str, criteria_list in specific_data.items():
+        for player_count_str, criteria_list in specific_data.items():
             try:
-                participant_num = ParticipantNum(participant_num_str)
+                player_count = int(player_count_str.rstrip("_player"))
                 for criteria_dict in criteria_list:
                     criteria = ConfigLoader._load_criteria_dict(
-                        criteria_dict, [participant_num]
+                        criteria_dict, [player_count]
                     )
                     all_criteria.append(criteria)
             except ValueError:
-                raise ValueError(
-                    f"Unknown participant number format: {participant_num_str}"
-                )
+                raise ValueError(f"Invalid player count format: {player_count_str}")
 
         return EvaluationConfig(all_criteria)
 
     @staticmethod
     def _load_criteria_dict(
-        criteria_dict: dict, applicable_games: list[ParticipantNum]
+        criteria_dict: dict, applicable_games: list[int]
     ) -> EvaluationCriteria:
         """評価基準辞書を読み込んでEvaluationCriteriaオブジェクトを作成
 
         Args:
             criteria_dict: YAML から読み込まれた評価基準データ
-            applicable_games: この基準が適用されるゲーム形式のリスト
+            applicable_games: この基準が適用されるプレイヤー数のリスト
 
         Returns:
             EvaluationCriteria: 評価基準オブジェクト
