@@ -2,7 +2,7 @@ import csv
 from pathlib import Path
 from typing import Set
 
-from ..models.game import ParticipantNum, GameInfo
+from models.game import ParticipantNum, GameInfo
 from .config_loader import ConfigLoader
 
 

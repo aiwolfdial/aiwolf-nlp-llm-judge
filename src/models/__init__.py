@@ -1,4 +1,4 @@
-from .game import GameFormat, GameInfo
+from .game import GameFormat, GameInfo, ParticipantNum
 from .evaluation import (
     EvaluationCriteria,
     EvaluationScore,
@@ -10,6 +10,7 @@ from .evaluation import (
 __all__ = [
     "GameFormat",
     "GameInfo",
+    "ParticipantNum",
     "EvaluationCriteria",
     "EvaluationScore",
     "ScoreType",

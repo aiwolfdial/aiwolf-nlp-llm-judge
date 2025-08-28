@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict
 
-from ..models.evaluation import (
+from models.game import GameInfo
+from models.evaluation import (
     EvaluationResult,
     EvaluationConfig,
-    GameInfo,
     EvaluationScore,
     ScoreType,
 )
@@ -47,8 +47,8 @@ class BaseEvaluator(ABC):
         Returns:
             EvaluationResult: 作成された評価結果
         """
-        # 該当ゲーム形式の全評価基準を取得
-        all_criteria = self.config.get_criteria_for_game(game_info.format)
+        # 該当参加人数の全評価基準を取得
+        all_criteria = self.config.get_criteria_for_game(game_info.participant_num)
 
         common_scores = {}
         specific_scores = {}
@@ -97,7 +97,7 @@ class BaseEvaluator(ABC):
         Raises:
             ValueError: スコアが不正な場合
         """
-        expected_criteria = self.config.get_criteria_for_game(game_info.format)
+        expected_criteria = self.config.get_criteria_for_game(game_info.participant_num)
         expected_names = {c.name for c in expected_criteria}
 
         # 不足している基準をチェック

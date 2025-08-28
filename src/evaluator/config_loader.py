@@ -2,8 +2,8 @@ import yaml
 from pathlib import Path
 from typing import Dict, List
 
-from ..models.evaluation import EvaluationConfig, EvaluationCriteria, ScoreType
-from ..models.game import ParticipantNum, GameFormat
+from models.evaluation import EvaluationConfig, EvaluationCriteria, ScoreType
+from models.game import ParticipantNum, GameFormat
 
 
 class ConfigLoader:
