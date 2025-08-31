@@ -4,7 +4,7 @@ AIWolf CSVファイルを生成AIで評価するシステム
 
 ## プロジェクト概要
 
-このプロジェクトは、AIWolfゲームのログ（CSVファイル）を生成AI（LLM）に渡し、事前定義された評価基準に沿って評価を行うシステムです。5人戦と13人戦の両方に対応し、共通評価項目とゲーム形式固有の評価項目を独立して評価します。
+このプロジェクトは、AIWolfゲームのログ（CSVファイル）を生成AI（LLM）に渡し、事前定義された評価基準に沿って評価を行うシステムです。5人戦と13人戦の両方に対応し、共通評価項目とゲーム形式固有の評価項目を独立して評価します。評価方式はランキング形式で、各プレイヤーを相対的に順位付けします。
 
 ## ファイル構成
 
@@ -17,32 +17,38 @@ aiwolf-nlp-llm-judge/
 ├── src/
 │   ├── aiwolf_csv/                 # CSV解析モジュール
 │   │   ├── parser.py              # CSVパーサー
-│   │   ├── reader.py
-│   │   └── writer.py
-│   └── evaluator/                 # 評価モジュール
-│       ├── models.py              # データクラス定義
-│       ├── config_loader.py       # 設定読み込み
-│       ├── game_detector.py       # ゲーム形式検出
-│       └── base_evaluator.py      # 評価器基底クラス
+│   │   ├── reader.py              # CSV読み込み
+│   │   └── writer.py              # CSV書き込み
+│   ├── evaluator/                 # 評価モジュール
+│   │   ├── config_loader.py       # 設定読み込み
+│   │   ├── game_detector.py       # ゲーム形式検出
+│   │   └── base_evaluator.py      # 評価器基底クラス
+│   └── models/                    # データモデル
+│       ├── game.py                # ゲーム関連モデル
+│       └── evaluation/            # 評価関連モデル
+│           ├── criteria.py        # 評価基準（ランキング形式）
+│           ├── result.py          # 評価結果管理
+│           ├── config.py          # 評価設定
+│           └── llm_response.py    # LLMレスポンス構造
 ├── main.py
 └── src/main.py
 ```
 
 ## 主要機能
 
-### 1. ゲーム形式の自動検出
-- CSVファイルを解析してプレイヤー数を検出
-- 5人戦 または 13人戦 を自動判別
+### 1. ゲーム形式の設定読み込み
+- 設定ファイルからプレイヤー数とゲーム形式を読み込み
+- 5人戦、13人戦などの任意のプレイヤー数に対応可能
 
 ### 2. 柔軟な評価基準システム
 - **共通評価項目**: 全ゲーム形式で共通の評価基準
 - **固有評価項目**: ゲーム形式別の特別な評価基準
 - **独立評価**: 各項目は重み付けなしで独立して評価
 
-### 3. スケール設定
-- `min`/`max`による範囲設定
-- `integer`/`float`による数値型指定
-- 項目ごとに異なるスケール設定可能
+### 3. ランキング評価
+- プレイヤー間の相対的な順位付け
+- `ORDINAL`（順序付け）または`COMPARATIVE`（比較ベース）のランキング形式
+- 各評価基準で独立したランキング
 
 ## 設定ファイル
 
@@ -52,6 +58,9 @@ aiwolf-nlp-llm-judge/
 ```yaml
 path:
   evaluation_criteria: config/evaluation_criteria.yaml
+game:
+  player_count: 5        # プレイヤー数（5, 13など）
+  format: "main_match"   # ゲーム形式（self_match, main_match）
 llm:
   model: "gpt-5"
 ```
@@ -63,69 +72,114 @@ llm:
 common_criteria:
   - name: "natural_expression"
     description: "発話表現は自然か"
-    scale:
-      min: 1
-      max: 5
-      type: "int"
+    ranking_type: "ordinal"
+    applicable_games: [5, 13]
     
   - name: "contextual_dialogue"
     description: "文脈を踏まえた対話は自然か"
-    scale:
-      min: 1
-      max: 5
-      type: "int"
+    ranking_type: "ordinal"
+    applicable_games: [5, 13]
     
   - name: "logical_consistency"
     description: "発話内容は一貫しており矛盾がないか"
-    scale:
-      min: 1
-      max: 5
-      type: "int"
+    ranking_type: "ordinal"
+    applicable_games: [5, 13]
     
   - name: "action_consistency"
     description: "ゲーム行動（投票、襲撃、占いなど）は対話内容を踏まえているか"
-    scale:
-      min: 1
-      max: 5
-      type: "int"
+    ranking_type: "ordinal"
+    applicable_games: [5, 13]
   
   - name: "character_consistency"
     description: "発話表現は豊かか。与えられたプロフィールと矛盾なく、エージェントごとに一貫して豊かなキャラクター性が出ているか"
-    scale:
-      min: 1
-      max: 5
-      type: "int"
+    ranking_type: "ordinal"
+    applicable_games: [5, 13]
 
 game_specific_criteria:
   13_player:
     - name: "team_play"
       description: "チームプレイができているか"
-      scale:
-        min: 1
-        max: 5
-        type: "int"
+      ranking_type: "ordinal"
+      applicable_games: [13]
 ```
 
 ## データ構造
 
-### 評価結果 (EvaluationResult)
+### ゲーム関連 (models/game.py)
 ```python
+class GameFormat(Enum):
+    SELF_MATCH = "self_match"    # 自己対戦
+    MAIN_MATCH = "main_match"    # メイン対戦
+
 @dataclass
-class EvaluationResult:
-    game_info: GameInfo                    # ゲーム情報
-    common_scores: Dict[str, EvaluationScore]  # 共通評価スコア
-    specific_scores: Dict[str, EvaluationScore] # 固有評価スコア
+class GameInfo:
+    game_format: GameFormat  # ゲーム形式
+    player_count: int        # プレイヤー数
+    game_id: str = ""        # ゲームID
 ```
 
-### 評価スコア (EvaluationScore)
+### 評価基準 (models/evaluation/criteria.py)
 ```python
+class RankingType(Enum):
+    ORDINAL = "ordinal"          # 順序付け（1位、2位...）
+    COMPARATIVE = "comparative"  # 比較ベース（A > B > C）
+
+class CriteriaCategory(Enum):
+    COMMON = "common"              # 全ゲーム形式共通
+    GAME_SPECIFIC = "game_specific"  # ゲーム形式固有
+
 @dataclass
-class EvaluationScore:
-    criteria_name: str           # 評価基準名
-    value: Union[int, float]     # スコア値
-    min_value: Union[int, float] # 最小値
-    max_value: Union[int, float] # 最大値
-    score_type: Literal["integer", "float"] # 数値型
+class EvaluationCriteria:
+    name: str                      # 評価基準名
+    description: str               # 評価基準の説明
+    ranking_type: RankingType      # ランキングの型
+    applicable_games: list[int]    # 適用されるプレイヤー数のリスト
+    category: CriteriaCategory     # 評価基準のカテゴリー
+```
+
+### LLMレスポンス (models/evaluation/llm_response.py)
+```python
+class EvaluationElement(BaseModel):
+    player_name: str = Field(description="評価対象者の名前")
+    reasoning: str = Field(description="各評価対象に対する順位付けの理由")
+    ranking: int = Field(description="評価対象者の順位(他のプレイヤーとの重複はなし)")
+
+class EvaluationLLMResponse(BaseModel):
+    rankings: list[EvaluationElement] = Field(description="各プレイヤーに対する評価")
+```
+
+### 評価結果 (models/evaluation/result.py)
+```python
+class EvaluationResult(list[EvaluationLLMResponse]):
+    """評価結果全体を表すクラス（EvaluationLLMResponseのリストを継承）"""
+    
+    def __init__(self):
+        super().__init__()
+        self._criteria_index: dict[str, int] = {}  # criteria_name -> index
+    
+    def add_response(self, criteria_name: str, response: EvaluationLLMResponse) -> None:
+        """評価レスポンスを追加"""
+        
+    def get_by_criteria(self, criteria_name: str) -> EvaluationLLMResponse:
+        """評価基準名でレスポンスを取得"""
+        
+    def get_all_criteria_names(self) -> list[str]:
+        """すべての評価基準名を取得"""
+        
+    def has_criteria(self, criteria_name: str) -> bool:
+        """指定した評価基準が存在するか確認"""
+```
+
+### 評価設定 (models/evaluation/config.py)
+```python
+class EvaluationConfig(list[EvaluationCriteria]):
+    """評価設定を表すクラス（EvaluationCriteriaのリストを継承）"""
+
+    def get_criteria_for_game(self, player_count: int) -> list[EvaluationCriteria]:
+        """指定されたプレイヤー数の評価基準を取得"""
+        
+    def get_criteria_by_name(self, criteria_name: str, player_count: int) -> EvaluationCriteria:
+        """基準名で評価基準を取得"""
 ```
 
 ## 使用方法
@@ -133,20 +187,21 @@ class EvaluationScore:
 ### 1. 設定読み込み
 ```python
 from pathlib import Path
-from src.evaluator.config_loader import ConfigLoader
+from evaluator.config_loader import ConfigLoader
 
 # settings.yamlから評価設定を読み込み
 settings_path = Path("config/settings.yaml")
 evaluation_config = ConfigLoader.load_from_settings(settings_path)
 ```
 
-### 2. ゲーム形式検出
+### 2. ゲーム情報取得
 ```python
-from src.evaluator.game_detector import GameDetector
+from evaluator.game_detector import GameDetector
 
 csv_path = Path("data/game_log.csv")
-game_info = GameDetector.detect_game_format(csv_path)
-print(f"ゲーム形式: {game_info.format.value}, プレイヤー数: {game_info.player_count}")
+settings_path = Path("config/settings.yaml")
+game_info = GameDetector.detect_game_format(csv_path, settings_path)
+print(f"ゲーム形式: {game_info.game_format.value}, プレイヤー数: {game_info.player_count}")
 ```
 
 ### 3. 評価実行
@@ -156,14 +211,30 @@ evaluator = SomeEvaluator(evaluation_config)
 result = evaluator.evaluate(csv_path, game_info)
 ```
 
+## 技術仕様
+
+- **Python バージョン**: 3.11以上
+- **型ヒント**: Python 3.10+ の union 演算子 (`|`) を使用
+- **データクラス**: `@dataclass` を活用した型安全な設計
+- **Enum**: 定数値の管理（`GameFormat`, `RankingType`, `CriteriaCategory`）
+- **Pydantic**: LLMレスポンスのバリデーション（`BaseModel`）
+
 ## 開発ステータス
 
 - [x] 基本設計
 - [x] データ構造設計
+  - [x] モデルの階層化（`models/`, `models/evaluation/`）
+  - [x] Enumによる型安全性の向上
 - [x] 設定ファイル作成
-- [x] ゲーム検出機能
+- [x] ゲーム情報取得機能
 - [x] 設定読み込み機能
 - [x] 評価器基底クラス
+- [x] データ構造リファクタリング
+  - [x] ParticipantNum Enumの削除
+  - [x] player_countによる統一
+  - [x] スコア評価からランキング評価への変更
+  - [x] EvaluationRankingの削除とEvaluationResultへの統合
+  - [x] EvaluationRecordsの削除とEvaluationResultへの機能統合
 - [ ] LLM評価エンジン実装
 - [ ] プロンプト設計
 - [ ] レポート生成機能
