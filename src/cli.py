@@ -45,10 +45,7 @@ def main() -> None:
         raise RuntimeError(f"設定ファイルの読み込みに失敗しました: {e}")
 
     # バッチ処理の実行
-    input_dir = Path("data/input")
-    output_dir = Path("data/output")
-
-    process_all_games(input_dir, output_dir, config)
+    process_all_games(config)
 
 
 if __name__ == "__main__":
