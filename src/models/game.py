@@ -16,3 +16,19 @@ class GameInfo:
     game_format: GameFormat
     player_count: int
     game_id: str = ""
+
+
+@dataclass
+class PlayerInfo:
+    "ゲーム参加者を表すデータクラス"
+
+    index: int
+    name: str
+    team: str
+    agent: str
+
+
+@dataclass
+class CharacterInfo:
+    name: str
+    profile: str

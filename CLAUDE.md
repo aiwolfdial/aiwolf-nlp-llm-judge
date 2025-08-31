@@ -14,11 +14,17 @@ aiwolf-nlp-llm-judge/
 │   ├── evaluation_criteria.yaml    # 評価基準設定
 │   ├── prompt.yaml                  # プロンプト設定
 │   └── settings.yaml               # メイン設定ファイル
+├── data/
+│   ├── input/                      # 入力データディレクトリ
+│   │   ├── log/                   # ログファイル (*.log)
+│   │   └── json/                  # JSONファイル (*.json)
+│   └── output/                     # 出力データディレクトリ
 ├── src/
 │   ├── aiwolf_csv/                 # CSV解析モジュール
 │   │   ├── parser.py              # CSVパーサー
-│   │   ├── reader.py              # CSV読み込み
-│   │   └── writer.py              # CSV書き込み
+│   │   ├── csv_reader.py          # CSV読み込み
+│   │   ├── json_reader.py         # JSON読み込み
+│   │   └── game_log.py            # ログ・JSONペア管理
 │   ├── evaluator/                 # 評価モジュール
 │   │   ├── config_loader.py       # 設定読み込み
 │   │   ├── game_detector.py       # ゲーム形式検出
@@ -49,6 +55,11 @@ aiwolf-nlp-llm-judge/
 - プレイヤー間の相対的な順位付け
 - `ORDINAL`（順序付け）または`COMPARATIVE`（比較ベース）のランキング形式
 - 各評価基準で独立したランキング
+
+### 4. ゲームログ管理
+- ログファイル（*.log）とJSONファイル（*.json）のペア管理
+- ファイル名による自動マッチング（例: `game1.log` ↔ `game1.json`）
+- 統合的なファイルアクセスインターフェース
 
 ## 設定ファイル
 
@@ -182,6 +193,32 @@ class EvaluationConfig(list[EvaluationCriteria]):
         """基準名で評価基準を取得"""
 ```
 
+### ゲームログ管理 (aiwolf_csv/game_log.py)
+```python
+class AIWolfGameLog:
+    """AIWolfのゲームログ（ログファイルとJSONファイルのペア）を管理するクラス"""
+    
+    def __init__(self, log_path: Path | None = None, json_path: Path | None = None):
+        """ログまたはJSONパスから初期化（片方から自動推定可能）"""
+    
+    @property
+    def game_id(self) -> str:
+        """ゲームID（ファイルの基本名）を取得"""
+    
+    def get_csv_reader(self, config: dict) -> AIWolfCSVReader:
+        """CSVリーダーを取得"""
+    
+    def get_json_reader(self) -> AIWolfJSONReader:
+        """JSONリーダーを取得"""
+    
+    def get_character_info(self) -> dict[str, Any]:
+        """キャラクター情報を取得"""
+    
+    @classmethod
+    def find_all_game_logs(cls, input_dir: Path) -> list["AIWolfGameLog"]:
+        """指定ディレクトリ内のすべてのゲームログを検索"""
+```
+
 ## 使用方法
 
 ### 1. 設定読み込み
@@ -204,11 +241,38 @@ game_info = GameDetector.detect_game_format(csv_path, settings_path)
 print(f"ゲーム形式: {game_info.game_format.value}, プレイヤー数: {game_info.player_count}")
 ```
 
-### 3. 評価実行
+### 3. ゲームログの読み込み
+```python
+from aiwolf_csv import AIWolfGameLog
+
+# 単一のゲームログを読み込み
+game_log = AIWolfGameLog.from_log_path(Path("data/input/log/game1.log"))
+# または
+game_log = AIWolfGameLog.from_json_path(Path("data/input/json/game1.json"))
+
+# キャラクター情報の取得
+character_info = game_log.get_character_info()
+
+# CSVリーダーの取得
+with game_log.get_csv_reader(config) as reader:
+    while line := reader.read_next_line():
+        # 行の処理
+        pass
+```
+
+### 4. 複数ゲームログの一括取得
+```python
+# すべてのゲームログを検索
+game_logs = AIWolfGameLog.find_all_game_logs(Path("data/input"))
+for game_log in game_logs:
+    print(f"Processing game: {game_log.game_id}")
+```
+
+### 5. 評価実行
 ```python
 # 評価器の実装が完了後
 evaluator = SomeEvaluator(evaluation_config)
-result = evaluator.evaluate(csv_path, game_info)
+result = evaluator.evaluate(game_log, game_info)
 ```
 
 ## 技術仕様
@@ -235,10 +299,35 @@ result = evaluator.evaluate(csv_path, game_info)
   - [x] スコア評価からランキング評価への変更
   - [x] EvaluationRankingの削除とEvaluationResultへの統合
   - [x] EvaluationRecordsの削除とEvaluationResultへの機能統合
+- [x] ファイル管理機能
+  - [x] CSVリーダーの実装（`csv_reader.py`）
+  - [x] JSONリーダーの実装（`json_reader.py`）
+  - [x] ゲームログ管理（`AIWolfGameLog`）
+  - [x] ログ・JSONファイルの自動マッチング
 - [ ] LLM評価エンジン実装
 - [ ] プロンプト設計
 - [ ] レポート生成機能
 - [ ] テスト実装
+
+## データファイル配置
+
+ゲームログファイルは以下の構造で配置します：
+
+```
+data/
+├── input/
+│   ├── log/     # ゲームログファイル (*.log)
+│   │   ├── game1.log
+│   │   ├── game2.log
+│   │   └── ...
+│   └── json/    # キャラクター情報ファイル (*.json)
+│       ├── game1.json  # game1.logに対応
+│       ├── game2.json  # game2.logに対応
+│       └── ...
+└── output/      # 評価結果の出力先
+```
+
+**重要**: ログファイルとJSONファイルは、拡張子前の名前が完全一致している必要があります。
 
 ## 今後の実装予定
 

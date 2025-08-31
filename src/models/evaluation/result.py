@@ -1,4 +1,4 @@
-from .llm_response import EvaluationLLMResponse
+from src.models.evaluation.llm_response import EvaluationLLMResponse
 
 
 class EvaluationResult(list[EvaluationLLMResponse]):

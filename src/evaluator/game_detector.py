@@ -1,9 +1,9 @@
 import csv
 from pathlib import Path
 
-from aiwolf_csv.parser import AIWolfCSVParser
-from models.game import GameInfo
-from .config_loader import ConfigLoader
+from src.aiwolf_csv.parser import AIWolfCSVParser
+from src.models.game import GameInfo
+from src.evaluator.config_loader import ConfigLoader
 
 
 class GameDetector:

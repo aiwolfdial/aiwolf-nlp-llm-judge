@@ -1,5 +1,5 @@
-from .game import GameFormat, GameInfo, ParticipantNum
-from .evaluation import (
+from src.models.game import GameFormat, GameInfo, ParticipantNum
+from src.models.evaluation import (
     EvaluationCriteria,
     EvaluationScore,
     ScoreType,

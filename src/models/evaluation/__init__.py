@@ -1,13 +1,13 @@
-from .criteria import (
+from src.models.evaluation.criteria import (
     EvaluationCriteria,
     RankingType,
     CriteriaCategory,
 )
-from .result import (
+from src.models.evaluation.result import (
     EvaluationResult,
 )
-from .config import EvaluationConfig
-from .llm_response import (
+from src.models.evaluation.config import EvaluationConfig
+from src.models.evaluation.llm_response import (
     EvaluationElement,
     EvaluationLLMResponse,
 )

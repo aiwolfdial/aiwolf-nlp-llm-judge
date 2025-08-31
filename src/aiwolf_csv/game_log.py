@@ -3,8 +3,8 @@
 from pathlib import Path
 from typing import Any, Self
 
-from .csv_reader import AIWolfCSVReader
-from .json_reader import AIWolfJSONReader
+from src.aiwolf_csv.csv_reader import AIWolfCSVReader
+from src.aiwolf_csv.json_reader import AIWolfJSONReader
 
 
 class AIWolfGameLogError(Exception):
