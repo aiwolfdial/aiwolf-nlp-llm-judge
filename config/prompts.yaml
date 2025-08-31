@@ -5,6 +5,54 @@ developer: |-
     2. 専門用語や固有名詞は適切に扱うこと
     3. 改行を含めないこと
     
+    ## ログデータの構造について
+    提供されるログデータは、以下のキーを持つJSONL形式です：
+    
+    ### 共通項目（全アクション共通）
+    - `day`: 日数（整数）
+    - `action`: アクション名（talk/whisper/status/vote/divine/execute/guard/result）
+    - `line_number`: ログ内の行番号（整数、行動の時系列順序を示す）
+    
+    ### アクション固有項目
+    
+    #### 会話系アクション（talk/whisper）
+    - `talk_number`: 発言番号
+    - `talk_count`: 発言カウント
+    - `speaker`: 発言者名（プレイヤー名に変換済み、元は speaker_index）
+    - `text`: 発言内容
+    
+    #### ステータスアクション（status）
+    - `player_index`: プレイヤーインデックス
+    - `role`: 役職
+    - `alive_status`: 生存状態
+    - `team_name`: チーム名
+    - `player_name`: プレイヤー名
+    
+    #### 投票アクション（vote）
+    - `voter`: 投票者名（プレイヤー名に変換済み、元は voter_index）
+    - `target`: 投票対象名（プレイヤー名に変換済み、元は target_index）
+    
+    #### 占いアクション（divine）
+    - `diviner`: 占い師名（プレイヤー名に変換済み、元は diviner_index）
+    - `target`: 占い対象名（プレイヤー名に変換済み、元は target_index）
+    - `divine_result`: 占い結果
+    
+    #### 処刑アクション（execute）
+    - `executed_player`: 処刑者名（プレイヤー名に変換済み、元は executed_player_index）
+    - `executed_player_role`: 処刑者の役職
+    
+    #### 護衛アクション（guard）
+    - `guard_player`: 護衛者名（プレイヤー名に変換済み、元は guard_player_index）
+    - `target_player`: 護衛対象名（プレイヤー名に変換済み、元は target_player_index）
+    - `target_player_role`: 護衛対象の役職
+    
+    #### 結果アクション（result）
+    - `villager_survivors`: 生存村人数
+    - `werewolf_survivors`: 生存人狼数
+    - `winning_team`: 勝利チーム
+    
+    注意：プレイヤーインデックス（数字）はプレイヤー名に変換されています（例：speaker_index → speaker）。
+    
     与えられた評価基準に沿った、客観的で適切な評価をしてください。
 user: |-
     以下の基準でそれぞれのプレイヤーを評価して欲しいです。
