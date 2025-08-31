@@ -1,4 +1,6 @@
-from aiwolf_nlp_common.packet import Request
+from __future__ import annotations
+
+from typing import Any
 
 
 class AIWolfCSVParser:
@@ -39,64 +41,6 @@ class AIWolfCSVParser:
             msg = f"Day must be a valid integer, got '{day_str}'"
             raise ValueError(msg) from e
 
-    def get_text(self, line: list[str]) -> str:
-        """エージェントの会話内容を取得.
-
-        Args:
-            line: CSV行のデータ（文字列のリスト）
-
-        Returns:
-            会話内容（文字列）
-
-        Raises:
-            TypeError: lineがリストでないか、要素が文字列でない場合
-            ValueError: 会話行動でない場合、またはlineが空の場合
-        """
-        if not self._is_conversation_action(line):
-            action = self.get_action(line)
-            msg = f"Not a conversation action. Got action: '{action}', line: {line}"
-            raise ValueError(msg)
-
-        return self._get_element(line=line, index=5)
-
-    def get_speaker_index(self, line: list[str]) -> str:
-        """発話者のインデックスを取得.
-
-        Args:
-            line: CSV行のデータ（文字列のリスト）
-
-        Returns:
-            発話者インデックス（文字列）
-
-        Raises:
-            TypeError: lineがリストでないか、要素が文字列でない場合
-            ValueError: 会話行動でない場合、またはlineが空の場合
-        """
-        if not self._is_conversation_action(line):
-            action = self.get_action(line)
-            msg = f"Not a conversation action. Got action: '{action}', line: {line}"
-            raise ValueError(msg)
-
-        return self._get_element(line=line, index=4)
-
-    def _is_conversation_action(self, line: list[str]) -> bool:
-        """会話行動かどうかを判定.
-
-        Args:
-            line: CSV行のデータ（文字列のリスト）
-
-        Returns:
-            会話行動の場合True、そうでなければFalse
-        """
-        try:
-            action = self.get_action(line)
-            return action in (
-                Request.TALK.value.lower(),
-                Request.WHISPER.value.lower(),
-            )
-        except (TypeError, ValueError):
-            return False
-
     def _get_element(self, line: list[str], index: int) -> str:
         """指定されたインデックスの要素を取得.
 
@@ -135,3 +79,125 @@ class AIWolfCSVParser:
             raise ValueError(msg)
 
         return line[index]
+
+    def parse_action_data(self, line: list[str]) -> dict[str, Any]:
+        """actionに応じて適切なデータを解析してdictとして返す.
+
+        Args:
+            line: CSV行のデータ（文字列のリスト）
+
+        Returns:
+            解析されたデータのdict
+
+        Raises:
+            TypeError: lineがリストでないか、要素が文字列でない場合
+            ValueError: lineが空の場合、または解析に失敗した場合
+        """
+        try:
+            action = self.get_action(line).lower()
+            base_data = {"day": self.get_day(line), "action": action}
+
+            # action別の追加データを取得
+            action_specific_data = self._get_action_specific_data(action, line)
+            base_data.update(action_specific_data)
+
+            return base_data
+
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Failed to parse action data for line: {line}") from e
+
+    def _get_action_specific_data(self, action: str, line: list[str]) -> dict[str, str]:
+        """action固有のデータを取得する.
+
+        Args:
+            action: アクション名
+            line: CSV行のデータ
+
+        Returns:
+            action固有のデータdict
+        """
+        action_parsers = {
+            "talk": self._parse_conversation_action,
+            "whisper": self._parse_conversation_action,
+            "status": self._parse_status_action,
+            "vote": self._parse_vote_action,
+            "divine": self._parse_divine_action,
+            "execute": self._parse_execute_action,
+            "guard": self._parse_guard_action,
+            "result": self._parse_result_action,
+        }
+
+        parser_func = action_parsers.get(action)
+        return parser_func(line) if parser_func else {}
+
+    def _parse_conversation_action(self, line: list[str]) -> dict[str, str]:
+        """会話系アクション（talk/whisper）のデータを解析."""
+        return {
+            "talk_number": self._get_element_safe(line, 2),
+            "turn_count": self._get_element_safe(line, 3),
+            "speaker_index": self._get_element_safe(line, 4),
+            "text": self._get_element_safe(line, 5),
+        }
+
+    def _parse_status_action(self, line: list[str]) -> dict[str, str]:
+        """statusアクションのデータを解析."""
+        return {
+            "player_index": self._get_element_safe(line, 2),
+            "role": self._get_element_safe(line, 3),
+            "alive_status": self._get_element_safe(line, 4),
+            "team_name": self._get_element_safe(line, 5),
+            "player_name": self._get_element_safe(line, 6),
+        }
+
+    def _parse_vote_action(self, line: list[str]) -> dict[str, str]:
+        """voteアクションのデータを解析."""
+        return {
+            "voter_index": self._get_element_safe(line, 2),
+            "target_index": self._get_element_safe(line, 3),
+        }
+
+    def _parse_divine_action(self, line: list[str]) -> dict[str, str]:
+        """divineアクションのデータを解析."""
+        return {
+            "diviner_index": self._get_element_safe(line, 2),
+            "target_index": self._get_element_safe(line, 3),
+            "divine_result": self._get_element_safe(line, 4),
+        }
+
+    def _parse_execute_action(self, line: list[str]) -> dict[str, str]:
+        """executeアクションのデータを解析."""
+        return {
+            "executed_player_index": self._get_element_safe(line, 2),
+            "executed_player_role": self._get_element_safe(line, 3),
+        }
+
+    def _parse_guard_action(self, line: list[str]) -> dict[str, str]:
+        """guardアクションのデータを解析."""
+        return {
+            "guard_player_index": self._get_element_safe(line, 2),
+            "target_player_index": self._get_element_safe(line, 3),
+            "target_player_role": self._get_element_safe(line, 4),
+        }
+
+    def _parse_result_action(self, line: list[str]) -> dict[str, str]:
+        """resultアクションのデータを解析."""
+        return {
+            "villager_survivors": self._get_element_safe(line, 2),
+            "werewolf_survivors": self._get_element_safe(line, 3),
+            "winning_team": self._get_element_safe(line, 4),
+        }
+
+    def _get_element_safe(self, line: list[str], index: int) -> str:
+        """安全に要素を取得する（インデックス範囲外の場合は空文字を返す）.
+
+        Args:
+            line: CSV行のデータ
+            index: 取得したいインデックス
+
+        Returns:
+            要素の値、または空文字
+        """
+        try:
+            return self._get_element(line, index)
+        except (ValueError, TypeError):
+            return ""
