@@ -11,11 +11,11 @@ from src.models.game import GameFormat
 
 
 class ConfigLoader:
-    """評価設定ファイルを読み込むクラス"""
+    """評価設定ファイルを読み込むクラス."""
 
     @staticmethod
     def load_player_count(settings_path: Path) -> int:
-        """settings.yamlからプレイヤー数を読み込む
+        """settings.yamlからプレイヤー数を読み込む.
 
         Args:
             settings_path: settings.yamlファイルのパス
@@ -46,7 +46,7 @@ class ConfigLoader:
 
     @staticmethod
     def load_game_format(settings_path: Path) -> GameFormat:
-        """settings.yamlからゲーム形式設定を読み込む
+        """settings.yamlからゲーム形式設定を読み込む.
 
         Args:
             settings_path: settings.yamlファイルのパス
@@ -77,7 +77,7 @@ class ConfigLoader:
 
     @staticmethod
     def load_from_settings(settings_path: Path) -> EvaluationConfig:
-        """settings.yamlから評価設定を読み込む
+        """settings.yamlから評価設定を読み込む.
 
         Args:
             settings_path: settings.yamlファイルのパス
@@ -112,7 +112,7 @@ class ConfigLoader:
 
     @staticmethod
     def load_evaluation_config(config_path: Path) -> EvaluationConfig:
-        """評価設定ファイルを読み込んでEvaluationConfigオブジェクトを作成
+        """評価設定ファイルを読み込んでEvaluationConfigオブジェクトを作成.
 
         Args:
             config_path: 設定ファイルのパス
@@ -166,7 +166,7 @@ class ConfigLoader:
     def _load_criteria_dict(
         criteria_dict: dict, applicable_games: list[int], category: CriteriaCategory
     ) -> EvaluationCriteria:
-        """評価基準辞書を読み込んでEvaluationCriteriaオブジェクトを作成
+        """評価基準辞書を読み込んでEvaluationCriteriaオブジェクトを作成.
 
         Args:
             criteria_dict: YAML から読み込まれた評価基準データ

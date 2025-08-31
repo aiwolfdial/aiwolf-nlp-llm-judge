@@ -7,7 +7,7 @@ from src.processor import process_all_games
 
 
 def setup_logging() -> None:
-    """ロギングの設定"""
+    """ロギングの設定."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -15,7 +15,7 @@ def setup_logging() -> None:
 
 
 def main() -> None:
-    """メイン処理"""
+    """メイン処理."""
     parser = argparse.ArgumentParser(description="")
 
     # 設定ファイルオプション

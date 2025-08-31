@@ -3,6 +3,8 @@ from pathlib import Path
 
 
 class AIWolfCSVReader:
+    """AIWolf CSVファイルを読み込むクラス."""
+
     def __init__(self, config: dict, file_path: Path):
         if not file_path.is_file():
             msg = f"File not found: {file_path}"
@@ -14,12 +16,12 @@ class AIWolfCSVReader:
         self._reader = None
 
     def open(self):
-        """ファイルを開いてCSVリーダーを初期化"""
+        """ファイルを開いてCSVリーダーを初期化."""
         self._file = open(self.file_path, encoding=self.encoding)
         self._reader = csv.reader(self._file)
 
     def read_next_line(self) -> list[str] | None:
-        """次の行を読み込む"""
+        """次の行を読み込む."""
         if self._reader is None:
             raise RuntimeError("File not opened. Call open() first.")
         try:
@@ -31,17 +33,17 @@ class AIWolfCSVReader:
             return None
 
     def close(self):
-        """ファイルを閉じる"""
+        """ファイルを閉じる."""
         if self._file:
             self._file.close()
             self._file = None
             self._reader = None
 
     def __enter__(self):
-        """with文のサポート"""
+        """with文のサポート."""
         self.open()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """with文のサポート"""
+        """with文のサポート."""
         self.close()

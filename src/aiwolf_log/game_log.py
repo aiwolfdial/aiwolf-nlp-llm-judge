@@ -1,4 +1,4 @@
-"""AIWolfのゲームログ（ログファイルとJSONファイル）を管理するモジュール"""
+"""AIWolfのゲームログ（ログファイルとJSONファイル）を管理するモジュール."""
 
 from pathlib import Path
 from typing import Any
@@ -9,13 +9,13 @@ from src.aiwolf_log.json_reader import AIWolfJSONReader
 
 
 class AIWolfGameLogError(Exception):
-    """AIWolfゲームログ関連のエラー"""
+    """AIWolfゲームログ関連のエラー."""
 
     pass
 
 
 class AIWolfGameLog:
-    """AIWolfのゲームログ（ログファイルとJSONファイルのペア）を管理するクラス"""
+    """AIWolfのゲームログ（ログファイルとJSONファイルのペア）を管理するクラス."""
 
     def __init__(
         self,
@@ -43,7 +43,7 @@ class AIWolfGameLog:
         self._game_id: str | None = None
 
     def _validate_files(self) -> None:
-        """ファイルの存在を確認
+        """ファイルの存在を確認.
 
         Raises:
             FileNotFoundError: ファイルが存在しない場合
@@ -54,7 +54,7 @@ class AIWolfGameLog:
             raise FileNotFoundError(f"JSON file not found: {self.json_path}")
 
     def get_csv_reader(self, config: dict) -> AIWolfCSVReader:
-        """CSVリーダーを取得
+        """CSVリーダーを取得.
 
         Args:
             config: 設定辞書
@@ -67,7 +67,7 @@ class AIWolfGameLog:
         return self._csv_reader
 
     def get_json_reader(self) -> AIWolfJSONReader:
-        """JSONリーダーを取得
+        """JSONリーダーを取得.
 
         Returns:
             AIWolfJSONReaderインスタンス
@@ -77,7 +77,7 @@ class AIWolfGameLog:
         return self._json_reader
 
     def read_json(self) -> dict[str, Any]:
-        """JSONファイルを読み込む
+        """JSONファイルを読み込む.
 
         Returns:
             JSONデータ
@@ -86,7 +86,7 @@ class AIWolfGameLog:
         return reader.read()
 
     def get_character_info(self) -> dict[str, Any]:
-        """キャラクター情報を取得
+        """キャラクター情報を取得.
 
         Returns:
             キャラクター情報の辞書
@@ -96,7 +96,7 @@ class AIWolfGameLog:
 
     @property
     def game_id(self) -> str:
-        """ゲームIDをJSONから取得"""
+        """ゲームIDをJSONから取得."""
         if self._game_id is None:
             json_reader = self.get_json_reader()
             json_data = json_reader.read()
@@ -106,7 +106,7 @@ class AIWolfGameLog:
 
     @classmethod
     def from_input_dir(cls, input_dir: Path, file_name: str) -> Self:
-        """入力ディレクトリとファイル名からインスタンスを作成"""
+        """入力ディレクトリとファイル名からインスタンスを作成."""
         return cls(input_dir=input_dir, file_name=file_name)
 
     def __repr__(self) -> str:

@@ -3,7 +3,7 @@ from enum import Enum
 
 
 class GameFormat(Enum):
-    """ゲーム形式を表す列挙型"""
+    """ゲーム形式を表す列挙型."""
 
     SELF_MATCH = "self_match"
     MAIN_MATCH = "main_match"
@@ -11,7 +11,7 @@ class GameFormat(Enum):
 
 @dataclass
 class GameInfo:
-    """ゲーム情報を表すデータクラス"""
+    """ゲーム情報を表すデータクラス."""
 
     game_format: GameFormat
     player_count: int
@@ -20,15 +20,16 @@ class GameInfo:
 
 @dataclass
 class PlayerInfo:
-    "ゲーム参加者を表すデータクラス"
+    """ゲーム参加者を表すデータクラス."""
 
     index: int
-    name: str
+    full_team_name: str
     team: str
-    agent: str
 
 
 @dataclass
 class CharacterInfo:
+    """キャラクター情報を表すデータクラス."""
+
     name: str
     profile: str

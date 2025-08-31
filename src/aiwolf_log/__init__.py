@@ -1,4 +1,4 @@
-"""AIWolfログファイル処理モジュール"""
+"""AIWolfログファイル処理モジュール."""
 
 from src.aiwolf_log.csv_reader import AIWolfCSVReader
 from src.aiwolf_log.game_log import AIWolfGameLog, AIWolfGameLogError

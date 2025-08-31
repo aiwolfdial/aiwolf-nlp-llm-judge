@@ -6,7 +6,7 @@ path:
 
 # LLM設定
 llm:
-  prompt_yml: config/prompt.yaml
+  prompt_yml: config/prompts.yaml
   model: "gpt-5"
 
 # ゲーム形式設定

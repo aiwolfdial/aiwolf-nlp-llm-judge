@@ -10,10 +10,10 @@ from src.models.evaluation import (
 
 
 class BaseEvaluator(ABC):
-    """評価器の基底クラス"""
+    """評価器の基底クラス."""
 
     def __init__(self, config: EvaluationConfig):
-        """評価器を初期化
+        """評価器を初期化.
 
         Args:
             config: 評価設定
@@ -22,7 +22,7 @@ class BaseEvaluator(ABC):
 
     @abstractmethod
     def evaluate(self, csv_path: Path, game_info: GameInfo) -> EvaluationResult:
-        """CSVファイルを評価
+        """CSVファイルを評価.
 
         Args:
             csv_path: 評価対象のCSVファイルパス
@@ -37,7 +37,7 @@ class BaseEvaluator(ABC):
         self,
         responses: dict[str, EvaluationLLMResponse],
     ) -> EvaluationResult:
-        """評価結果オブジェクトを作成
+        """評価結果オブジェクトを作成.
 
         Args:
             responses: 評価レスポンス辞書（基準名 -> レスポンス）
@@ -57,7 +57,7 @@ class BaseEvaluator(ABC):
         responses: dict[str, EvaluationLLMResponse],
         player_count: int,
     ) -> None:
-        """評価レスポンスの妥当性をチェック
+        """評価レスポンスの妥当性をチェック.
 
         Args:
             responses: 評価レスポンス辞書

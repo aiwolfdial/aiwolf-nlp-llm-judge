@@ -1,4 +1,4 @@
-"""ゲームログファイルの検索機能を提供するモジュール"""
+"""ゲームログファイルの検索機能を提供するモジュール."""
 
 from pathlib import Path
 
@@ -6,7 +6,7 @@ from src.aiwolf_log.game_log import AIWolfGameLog, AIWolfGameLogError
 
 
 def find_all_game_logs(input_dir: Path) -> list[AIWolfGameLog]:
-    """指定ディレクトリ内のすべてのゲームログを検索
+    """指定ディレクトリ内のすべてのゲームログを検索.
 
     Args:
         input_dir: inputディレクトリのパス

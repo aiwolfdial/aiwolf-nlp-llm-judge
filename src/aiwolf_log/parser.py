@@ -134,7 +134,7 @@ class AIWolfCSVParser:
         """会話系アクション（talk/whisper）のデータを解析."""
         return {
             "talk_number": self._get_element_safe(line, 2),
-            "turn_count": self._get_element_safe(line, 3),
+            "talk_count": self._get_element_safe(line, 3),
             "speaker_index": self._get_element_safe(line, 4),
             "text": self._get_element_safe(line, 5),
         }

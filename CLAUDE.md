@@ -17,7 +17,7 @@ aiwolf-nlp-llm-judge/
 ├── uv.lock                         # 依存関係ロックファイル
 ├── config/
 │   ├── evaluation_criteria.yaml    # 評価基準設定
-│   ├── prompt.yaml                  # プロンプトテンプレート
+│   ├── prompts.yaml                 # プロンプトテンプレート
 │   └── settings.yaml               # メイン設定ファイル
 ├── data/
 │   ├── input/                      # 入力データディレクトリ
@@ -40,6 +40,10 @@ aiwolf-nlp-llm-judge/
     │   ├── config_loader.py       # 設定読み込み
     │   ├── game_detector.py       # ゲーム形式検出
     │   └── base_evaluator.py      # 評価器基底クラス
+    ├── llm/                       # LLM関連モジュール
+    │   ├── __init__.py
+    │   ├── evaluator.py           # LLM評価器
+    │   └── formatter.py           # ゲームログフォーマッター
     └── models/                    # データモデル
         ├── __init__.py
         ├── game.py                # ゲーム関連モデル
@@ -84,12 +88,21 @@ aiwolf-nlp-llm-judge/
 
 ```yaml
 path:
+  env: config/.env
   evaluation_criteria: config/evaluation_criteria.yaml
-game:
-  player_count: 5        # プレイヤー数（5, 13など）
-  format: "main_match"   # ゲーム形式（self_match, main_match）
+
 llm:
+  prompt_yml: config/prompts.yaml
   model: "gpt-5"
+
+game:
+  format: "main_match"  # main_match または self_match
+  player_count: 5  # プレイヤー数（5, 13など）
+
+processing:
+  input_dir: "data/input"    # 入力ディレクトリ
+  output_dir: "data/output"  # 出力ディレクトリ
+  max_workers: 4             # プロセス並列処理数
 ```
 
 ### evaluation_criteria.yaml
@@ -99,34 +112,34 @@ llm:
 common_criteria:
   - name: "natural_expression"
     description: "発話表現は自然か"
-    ranking_type: "ordinal"
+    ranking_type: "comparative"
     applicable_games: [5, 13]
     
   - name: "contextual_dialogue"
     description: "文脈を踏まえた対話は自然か"
-    ranking_type: "ordinal"
+    ranking_type: "comparative"
     applicable_games: [5, 13]
     
   - name: "logical_consistency"
     description: "発話内容は一貫しており矛盾がないか"
-    ranking_type: "ordinal"
+    ranking_type: "comparative"
     applicable_games: [5, 13]
     
   - name: "action_consistency"
     description: "ゲーム行動（投票、襲撃、占いなど）は対話内容を踏まえているか"
-    ranking_type: "ordinal"
+    ranking_type: "comparative"
     applicable_games: [5, 13]
   
   - name: "character_consistency"
     description: "発話表現は豊かか。与えられたプロフィールと矛盾なく、エージェントごとに一貫して豊かなキャラクター性が出ているか"
-    ranking_type: "ordinal"
+    ranking_type: "comparative"
     applicable_games: [5, 13]
 
 game_specific_criteria:
   13_player:
     - name: "team_play"
       description: "チームプレイができているか"
-      ranking_type: "ordinal"
+      ranking_type: "comparative"
       applicable_games: [13]
 ```
 
@@ -209,17 +222,25 @@ class EvaluationConfig(list[EvaluationCriteria]):
         """基準名で評価基準を取得"""
 ```
 
-### ゲームログ管理 (aiwolf_csv/game_log.py)
+### ゲームログ管理 (aiwolf_log/game_log.py)
 ```python
 class AIWolfGameLog:
     """AIWolfのゲームログ（ログファイルとJSONファイルのペア）を管理するクラス"""
     
-    def __init__(self, log_path: Path | None = None, json_path: Path | None = None):
-        """ログまたはJSONパスから初期化（片方から自動推定可能）"""
+    def __init__(self, input_dir: Path, file_name: str):
+        """初期化
+        Args:
+            input_dir: 入力ディレクトリのパス
+            file_name: ファイル名（拡張子なし）
+        """
+    
+    @classmethod
+    def from_input_dir(cls, input_dir: Path, file_name: str) -> Self:
+        """入力ディレクトリとファイル名からインスタンスを作成"""
     
     @property
     def game_id(self) -> str:
-        """ゲームID（ファイルの基本名）を取得"""
+        """ゲームIDをJSONから取得"""
     
     def get_csv_reader(self, config: dict) -> AIWolfCSVReader:
         """CSVリーダーを取得"""
@@ -237,7 +258,7 @@ class AIWolfGameLog:
 ### 1. 設定読み込み
 ```python
 from pathlib import Path
-from evaluator.config_loader import ConfigLoader
+from src.evaluator.config_loader import ConfigLoader
 
 # settings.yamlから評価設定を読み込み
 settings_path = Path("config/settings.yaml")
@@ -246,7 +267,7 @@ evaluation_config = ConfigLoader.load_from_settings(settings_path)
 
 ### 2. ゲーム情報取得
 ```python
-from evaluator.game_detector import GameDetector
+from src.evaluator.game_detector import GameDetector
 
 csv_path = Path("data/game_log.csv")
 settings_path = Path("config/settings.yaml")
@@ -256,12 +277,12 @@ print(f"ゲーム形式: {game_info.game_format.value}, プレイヤー数: {gam
 
 ### 3. ゲームログの読み込み
 ```python
-from aiwolf_csv import AIWolfGameLog
+from src.aiwolf_log import AIWolfGameLog
 
 # 単一のゲームログを読み込み
-game_log = AIWolfGameLog.from_log_path(Path("data/input/log/game1.log"))
-# または
-game_log = AIWolfGameLog.from_json_path(Path("data/input/json/game1.json"))
+input_dir = Path("data/input")
+file_name = "game1"  # 拡張子なし
+game_log = AIWolfGameLog.from_input_dir(input_dir, file_name)
 
 # キャラクター情報の取得
 character_info = game_log.get_character_info()

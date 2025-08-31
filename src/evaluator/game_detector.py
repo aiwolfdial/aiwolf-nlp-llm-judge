@@ -7,11 +7,11 @@ from src.evaluator.config_loader import ConfigLoader
 
 
 class GameDetector:
-    """CSVファイルからゲーム形式を検出するクラス"""
+    """CSVファイルからゲーム形式を検出するクラス."""
 
     @staticmethod
     def detect_game_format(csv_path: Path, settings_path: Path) -> GameInfo:
-        """CSVファイルからゲーム形式を検出
+        """CSVファイルからゲーム形式を検出.
 
         Args:
             csv_path: CSVファイルのパス
@@ -39,7 +39,7 @@ class GameDetector:
 
     @staticmethod
     def _extract_player_indices(csv_path: Path) -> set[str]:
-        """CSVファイルからプレイヤーインデックスを抽出
+        """CSVファイルからプレイヤーインデックスを抽出.
 
         Args:
             csv_path: CSVファイルのパス
