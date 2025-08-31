@@ -10,34 +10,42 @@ AIWolf CSVファイルを生成AIで評価するシステム
 
 ```
 aiwolf-nlp-llm-judge/
+├── CLAUDE.md                       # プロジェクト仕様書
+├── README.md                       # プロジェクト概要
+├── main.py                         # エントリーポイント
+├── pyproject.toml                  # プロジェクト設定・依存関係
+├── uv.lock                         # 依存関係ロックファイル
 ├── config/
 │   ├── evaluation_criteria.yaml    # 評価基準設定
-│   ├── prompt.yaml                  # プロンプト設定
+│   ├── prompt.yaml                  # プロンプトテンプレート
 │   └── settings.yaml               # メイン設定ファイル
 ├── data/
 │   ├── input/                      # 入力データディレクトリ
-│   │   ├── log/                   # ログファイル (*.log)
-│   │   └── json/                  # JSONファイル (*.json)
 │   └── output/                     # 出力データディレクトリ
-├── src/
-│   ├── aiwolf_csv/                 # CSV解析モジュール
-│   │   ├── parser.py              # CSVパーサー
-│   │   ├── csv_reader.py          # CSV読み込み
-│   │   ├── json_reader.py         # JSON読み込み
-│   │   └── game_log.py            # ログ・JSONペア管理
-│   ├── evaluator/                 # 評価モジュール
-│   │   ├── config_loader.py       # 設定読み込み
-│   │   ├── game_detector.py       # ゲーム形式検出
-│   │   └── base_evaluator.py      # 評価器基底クラス
-│   └── models/                    # データモデル
-│       ├── game.py                # ゲーム関連モデル
-│       └── evaluation/            # 評価関連モデル
-│           ├── criteria.py        # 評価基準（ランキング形式）
-│           ├── result.py          # 評価結果管理
-│           ├── config.py          # 評価設定
-│           └── llm_response.py    # LLMレスポンス構造
-├── main.py
-└── src/main.py
+└── src/
+    ├── __init__.py
+    ├── cli.py                      # CLIインターフェース
+    ├── processor.py                # バッチ処理（関数ベース）
+    ├── aiwolf_csv/                 # CSV解析モジュール
+    │   ├── __init__.py
+    │   ├── parser.py              # CSVパーサー
+    │   ├── csv_reader.py          # CSV読み込み
+    │   ├── json_reader.py         # JSON読み込み
+    │   └── game_log.py            # ログ・JSONペア管理
+    ├── evaluator/                 # 評価モジュール
+    │   ├── __init__.py
+    │   ├── config_loader.py       # 設定読み込み
+    │   ├── game_detector.py       # ゲーム形式検出
+    │   └── base_evaluator.py      # 評価器基底クラス
+    └── models/                    # データモデル
+        ├── __init__.py
+        ├── game.py                # ゲーム関連モデル
+        └── evaluation/            # 評価関連モデル
+            ├── __init__.py
+            ├── criteria.py        # 評価基準（ランキング形式）
+            ├── result.py          # 評価結果管理
+            ├── config.py          # 評価設定
+            └── llm_response.py    # LLMレスポンス構造
 ```
 
 ## 主要機能
@@ -60,6 +68,11 @@ aiwolf-nlp-llm-judge/
 - ログファイル（*.log）とJSONファイル（*.json）のペア管理
 - ファイル名による自動マッチング（例: `game1.log` ↔ `game1.json`）
 - 統合的なファイルアクセスインターフェース
+
+### 5. バッチ処理
+- 関数ベースの並列処理システム
+- 複数ゲームログの一括評価
+- プロセスプールによる効率的な処理
 
 ## 設定ファイル
 
@@ -304,10 +317,35 @@ result = evaluator.evaluate(game_log, game_info)
   - [x] JSONリーダーの実装（`json_reader.py`）
   - [x] ゲームログ管理（`AIWolfGameLog`）
   - [x] ログ・JSONファイルの自動マッチング
+- [x] バッチ処理システム
+  - [x] 関数ベースの並列処理実装（`processor.py`）
+  - [x] CLIインターフェース（`cli.py`）
+  - [x] プロジェクトエントリーポイント（`main.py`）
 - [ ] LLM評価エンジン実装
 - [ ] プロンプト設計
 - [ ] レポート生成機能
 - [ ] テスト実装
+
+### バッチ処理 (processor.py)
+```python
+def find_all_game_logs(input_dir: Path) -> list[AIWolfGameLog]:
+    """指定ディレクトリからすべてのゲームログを検索"""
+    
+def process_all_games(
+    input_dir: Path, 
+    output_dir: Path, 
+    config: dict[str, Any], 
+    max_workers: int | None = None
+) -> None:
+    """すべてのゲームログを並列処理で評価"""
+    
+def process_single_game(
+    game_log: AIWolfGameLog, 
+    config: dict[str, Any], 
+    output_dir: Path
+) -> bool:
+    """単一ゲームの処理（プロセス間で実行される関数）"""
+```
 
 ## データファイル配置
 
@@ -316,22 +354,39 @@ result = evaluator.evaluate(game_log, game_info)
 ```
 data/
 ├── input/
-│   ├── log/     # ゲームログファイル (*.log)
+│   ├── log/                   # ゲームログファイル (*.log)
 │   │   ├── game1.log
 │   │   ├── game2.log
 │   │   └── ...
-│   └── json/    # キャラクター情報ファイル (*.json)
-│       ├── game1.json  # game1.logに対応
-│       ├── game2.json  # game2.logに対応
+│   └── json/                  # キャラクター情報ファイル (*.json)
+│       ├── game1.json         # game1.logに対応
+│       ├── game2.json         # game2.logに対応
 │       └── ...
-└── output/      # 評価結果の出力先
+└── output/                     # 評価結果の出力先
 ```
 
-**重要**: ログファイルとJSONファイルは、拡張子前の名前が完全一致している必要があります。
+**重要**: 
+- ログファイル（*.log）とJSONファイル（*.json）は、拡張子前の名前が完全一致している必要があります
+- `AIWolfGameLog.find_all_game_logs()` は入力ディレクトリを再帰的に検索し、ログ・JSONペアを自動検出します
+
+## CLIインターフェース
+
+### 基本的な使用方法
+```bash
+# プロジェクトの実行
+python main.py
+
+# または直接CLIを実行
+python -m src.cli
+```
+
+### 実装状況
+- **main.py**: エントリーポイント、`src.cli.main()` を呼び出し
+- **src/cli.py**: コマンドライン引数の解析、設定読み込み、バッチ処理の実行
+- **src/processor.py**: 実際の並列処理実装（関数ベース）
 
 ## 今後の実装予定
 
 1. **LLM評価エンジン** - 実際にLLMを呼び出して評価を行う
 2. **プロンプト管理** - 評価基準別のプロンプト設計
 3. **レポート生成** - 評価結果の可視化・出力
-4. **バッチ処理** - 複数ファイルの一括評価
