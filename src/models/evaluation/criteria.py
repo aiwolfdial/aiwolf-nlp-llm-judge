@@ -25,21 +25,3 @@ class EvaluationCriteria:
     ranking_type: RankingType
     applicable_games: list[int]
     category: CriteriaCategory
-
-
-@dataclass
-class EvaluationRanking:
-    """個別評価ランキングを表すデータクラス"""
-
-    criteria_name: str
-    rankings: list[str]  # 評価対象のIDリスト（高評価順）
-    ranking_type: RankingType
-    reasoning: dict[str, str]  # 各評価対象に対する理由
-
-    def __post_init__(self):
-        """ランキングの整合性チェック"""
-        if len(self.rankings) != len(set(self.rankings)):
-            raise ValueError("Rankings contain duplicate entries")
-
-        if set(self.rankings) != set(self.reasoning.keys()):
-            raise ValueError("Rankings and reasoning keys must match")

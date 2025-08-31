@@ -1,31 +1,35 @@
-from dataclasses import dataclass
-from pydantic import BaseModel, Field
-
-from models.game import GameInfo
-from models.evaluation.criteria import EvaluationRanking
+from .llm_response import EvaluationLLMResponse
 
 
-class EvaluationLLMResponse(BaseModel):
-    rankings: list[str] = Field(description="評価対象のIDのリスト（評価の高い順）")
-    reasoning: dict[str, str] = Field(description="各評価対象に対する順位付けの理由")
+class EvaluationResult(list[EvaluationLLMResponse]):
+    """評価結果全体を表すクラス（EvaluationLLMResponseのリストを継承）"""
 
+    def __init__(self):
+        super().__init__()
+        self._criteria_index: dict[str, int] = {}  # criteria_name -> index
 
-@dataclass
-class EvaluationResult:
-    """評価結果全体を表すデータクラス"""
+    def add_response(self, criteria_name: str, response: EvaluationLLMResponse) -> None:
+        """評価レスポンスを追加"""
+        if criteria_name in self._criteria_index:
+            # 既存の基準を更新
+            index = self._criteria_index[criteria_name]
+            self[index] = response
+        else:
+            # 新しい基準を追加
+            self.append(response)
+            self._criteria_index[criteria_name] = len(self) - 1
 
-    game_info: GameInfo
-    common_rankings: dict[str, EvaluationRanking]
-    specific_rankings: dict[str, EvaluationRanking]
-    evaluation_targets: list[str]  # 評価対象のIDリスト
+    def get_by_criteria(self, criteria_name: str) -> EvaluationLLMResponse:
+        """評価基準名でレスポンスを取得"""
+        if criteria_name not in self._criteria_index:
+            raise KeyError(f"Criteria '{criteria_name}' not found")
+        index = self._criteria_index[criteria_name]
+        return self[index]
 
-    def get_all_rankings(self) -> dict[str, EvaluationRanking]:
-        """全ての評価ランキングを取得"""
-        return {**self.common_rankings, **self.specific_rankings}
+    def get_all_criteria_names(self) -> list[str]:
+        """すべての評価基準名を取得"""
+        return list(self._criteria_index.keys())
 
-    def get_ranking_by_name(self, criteria_name: str) -> EvaluationRanking:
-        """基準名で評価ランキングを取得"""
-        all_rankings = self.get_all_rankings()
-        if criteria_name not in all_rankings:
-            raise KeyError(f"Criteria '{criteria_name}' not found in evaluation result")
-        return all_rankings[criteria_name]
+    def has_criteria(self, criteria_name: str) -> bool:
+        """指定した評価基準が存在するか確認"""
+        return criteria_name in self._criteria_index
