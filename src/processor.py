@@ -98,6 +98,90 @@ def process_all_games(config: dict[str, Any]) -> None:
     logger.info(f"Batch processing completed. Success: {completed}, Failed: {failed}")
 
 
+def _load_evaluation_configs(settings_path: Path) -> tuple[Any, Any]:
+    """評価設定とゲーム情報の読み込み."""
+    evaluation_config = ConfigLoader.load_from_settings(settings_path)
+    logger.info(f"Loaded evaluation config with {len(evaluation_config)} criteria")
+    return evaluation_config
+
+
+def _detect_and_log_game_info(game_log: AIWolfGameLog, settings_path: Path) -> Any:
+    """ゲーム情報の検出とログ出力."""
+    game_info = GameDetector.detect_game_format(game_log.log_path, settings_path)
+    logger.info(
+        f"Detected game format: {game_info.game_format.value}, player count: {game_info.player_count}"
+    )
+    return game_info
+
+
+def _format_game_log(
+    game_log: AIWolfGameLog, config: dict[str, Any], game_info: Any
+) -> list[str]:
+    """ゲームログのフォーマット変換."""
+    formatter = GameLogFormatter(game_log, config, parser=None)
+    formatted_data = formatter.convert_to_jsonl(game_info.game_format)
+    logger.info(f"Formatted {len(formatted_data)} log entries")
+    return formatted_data
+
+
+def _execute_evaluations(
+    evaluation_config: Any, game_info: Any, formatted_data: list[str], evaluator: Any
+) -> EvaluationResult:
+    """各評価基準に対する評価の実行."""
+    evaluation_result = EvaluationResult()
+    criteria_for_game = evaluation_config.get_criteria_for_game(game_info.player_count)
+
+    for criteria in criteria_for_game:
+        logger.info(f"Evaluating criteria: {criteria.name}")
+
+        llm_response = evaluator.evaluation(
+            criteria=criteria,
+            log=formatted_data,
+            output_structure=EvaluationLLMResponse,
+        )
+
+        evaluation_result.add_response(criteria.name, llm_response)
+        logger.info(f"Completed evaluation for criteria: {criteria.name}")
+
+    return evaluation_result
+
+
+def _build_result_data(
+    game_log: AIWolfGameLog, game_info: Any, evaluation_result: EvaluationResult
+) -> dict[str, Any]:
+    """評価結果データの構築."""
+    result_data = {
+        "game_id": game_log.game_id,
+        "game_info": {
+            "format": game_info.game_format.value,
+            "player_count": game_info.player_count,
+        },
+        "evaluations": {},
+    }
+
+    for criteria_name in evaluation_result.get_all_criteria_names():
+        response = evaluation_result.get_by_criteria(criteria_name)
+        result_data["evaluations"][criteria_name] = {
+            "rankings": [
+                {
+                    "player_name": elem.player_name,
+                    "ranking": elem.ranking,
+                    "reasoning": elem.reasoning,
+                }
+                for elem in response.rankings
+            ]
+        }
+
+    return result_data
+
+
+def _save_evaluation_result(result_data: dict[str, Any], output_path: Path) -> None:
+    """評価結果のファイル保存."""
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(result_data, f, ensure_ascii=False, indent=2)
+    logger.info(f"Saved evaluation results to: {output_path}")
+
+
 def process_single_game(
     game_log: AIWolfGameLog, config: dict[str, Any], output_dir: Path
 ) -> bool:
@@ -105,80 +189,26 @@ def process_single_game(
     try:
         logger.info(f"Processing game: {game_log.game_id}")
 
-        # 1. 設定から必要な情報を取得
         settings_path = Path(config.get("settings_path", "config/settings.yaml"))
 
-        # 2. 評価設定の読み込み
-        evaluation_config = ConfigLoader.load_from_settings(settings_path)
-        logger.info(f"Loaded evaluation config with {len(evaluation_config)} criteria")
+        # 設定とゲーム情報の読み込み
+        evaluation_config = _load_evaluation_configs(settings_path)
+        game_info = _detect_and_log_game_info(game_log, settings_path)
 
-        # 3. ゲーム情報の検出
-        game_info = GameDetector.detect_game_format(game_log.log_path, settings_path)
-        logger.info(
-            f"Detected game format: {game_info.game_format.value}, player count: {game_info.player_count}"
-        )
+        # ゲームログのフォーマット変換
+        formatted_data = _format_game_log(game_log, config, game_info)
 
-        # 4. ゲームログのフォーマット変換
-        formatter = GameLogFormatter(game_log, config, parser=None)
-        formatted_data = formatter.convert_to_jsonl(game_info.game_format)
-        logger.info(f"Formatted {len(formatted_data)} log entries")
-
-        # 5. 評価実行
+        # 評価実行
         evaluator = Evaluator(config)
-
-        # 評価結果を格納する
-        evaluation_result = EvaluationResult()
-
-        # 各評価基準に対して評価を実行
-        criteria_for_game = evaluation_config.get_criteria_for_game(
-            game_info.player_count
+        evaluation_result = _execute_evaluations(
+            evaluation_config, game_info, formatted_data, evaluator
         )
-        for criteria in criteria_for_game:
-            logger.info(f"Evaluating criteria: {criteria.name}")
 
-            # 評価実行（formatted_dataを直接渡す）
-            llm_response = evaluator.evaluation(
-                criteria=criteria,
-                log=formatted_data,
-                output_structure=EvaluationLLMResponse,
-            )
-
-            # 結果を追加
-            evaluation_result.add_response(criteria.name, llm_response)
-            logger.info(f"Completed evaluation for criteria: {criteria.name}")
-
-        # 6. 結果の保存
+        # 結果の保存
         output_path = output_dir / f"{game_log.game_id}_result.json"
+        result_data = _build_result_data(game_log, game_info, evaluation_result)
+        _save_evaluation_result(result_data, output_path)
 
-        # 結果をJSON形式で保存
-        result_data = {
-            "game_id": game_log.game_id,
-            "game_info": {
-                "format": game_info.game_format.value,
-                "player_count": game_info.player_count,
-            },
-            "evaluations": {},
-        }
-
-        # 各評価基準の結果を追加
-        for criteria_name in evaluation_result.get_all_criteria_names():
-            response = evaluation_result.get_by_criteria(criteria_name)
-            result_data["evaluations"][criteria_name] = {
-                "rankings": [
-                    {
-                        "player_name": elem.player_name,
-                        "ranking": elem.ranking,
-                        "reasoning": elem.reasoning,
-                    }
-                    for elem in response.rankings
-                ]
-            }
-
-        # ファイルに保存
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(result_data, f, ensure_ascii=False, indent=2)
-
-        logger.info(f"Saved evaluation results to: {output_path}")
         return True
 
     except Exception as e:
