@@ -25,7 +25,7 @@ aiwolf-nlp-llm-judge/
 └── src/
     ├── __init__.py
     ├── cli.py                      # CLIインターフェース
-    ├── processor.py                # バッチ処理（関数ベース）
+    ├── processor.py                # バッチ処理（クラスベース）
     ├── aiwolf_log/                 # ログファイル解析モジュール
     │   ├── __init__.py
     │   ├── parser.py              # CSVパーサー
@@ -77,9 +77,9 @@ aiwolf-nlp-llm-judge/
 - 統合的なファイルアクセスインターフェース
 
 ### 5. バッチ処理
-- 関数ベースの並列処理システム
+- クラスベースの並列処理システム（`GameProcessor`、`BatchProcessor`）
 - 複数ゲームログの一括評価
-- プロセスプールによる効率的な処理
+- プロセス間並列処理とスレッド並列処理の組み合わせによる効率的な処理
 
 ## 設定ファイル
 
@@ -303,11 +303,25 @@ for game_log in game_logs:
     print(f"Processing game: {game_log.game_id}")
 ```
 
-### 5. 評価実行
+### 5. バッチ処理実行
 ```python
-# 評価器の実装が完了後
-evaluator = SomeEvaluator(evaluation_config)
-result = evaluator.evaluate(game_log, game_info)
+from src.processor import BatchProcessor
+
+# バッチ処理の実行
+processor = BatchProcessor(config)
+result = processor.process_all_games()
+
+print(f"成功率: {result.success_rate:.2%}")
+print(f"処理済み: {result.completed}/{result.total}")
+```
+
+### 6. 単一ゲーム処理
+```python
+from src.processor import GameProcessor
+
+# 単一ゲームの処理
+game_processor = GameProcessor(config)
+success = game_processor.process(game_log, output_dir)
 ```
 
 ## 技術仕様
@@ -341,7 +355,11 @@ result = evaluator.evaluate(game_log, game_info)
   - [x] ゲームログ管理（`AIWolfGameLog`）
   - [x] ログ・JSONファイルの自動マッチング
 - [x] バッチ処理システム
-  - [x] 関数ベースの並列処理実装（`processor.py`）
+  - [x] クラスベースの並列処理実装（`processor.py`）
+    - [x] `GameProcessor`: 単一ゲーム処理
+    - [x] `BatchProcessor`: バッチ処理管理
+    - [x] `ProcessingConfig`, `ProcessingResult`: 型安全な設定・結果管理
+  - [x] マルチスレッド評価実装（各評価基準を並列実行）
   - [x] CLIインターフェース（`cli.py`）
   - [x] プロジェクトエントリーポイント（`main.py`）
 - [x] 型安全性の改善
@@ -361,33 +379,47 @@ result = evaluator.evaluate(game_log, game_info)
 
 ### バッチ処理 (processor.py)
 ```python
-def find_all_game_logs(input_dir: Path) -> list[AIWolfGameLog]:
-    """指定ディレクトリからすべてのゲームログを検索"""
-    
-def process_all_games(config: dict[str, Any]) -> None:
-    """すべてのゲームログを並列処理で評価"""
-    
-def process_single_game(
-    game_log: AIWolfGameLog, 
-    config: dict[str, Any], 
+@dataclass(frozen=True)
+class ProcessingConfig:
+    """処理設定を表すデータクラス"""
+    input_dir: Path
     output_dir: Path
-) -> bool:
-    """単一ゲームの処理（プロセス間で実行される関数）"""
+    max_workers: int
+    game_format: GameFormat
 
-# 主要な内部関数（型安全性改善済み）
-def _load_evaluation_configs(settings_path: Path) -> EvaluationConfig:
-    """評価設定とゲーム情報の読み込み"""
+@dataclass
+class ProcessingResult:
+    """処理結果を表すデータクラス"""
+    total: int = 0
+    completed: int = 0
+    failed: int = 0
+    
+    @property
+    def success_rate(self) -> float:
+        """成功率を計算"""
 
-def _detect_and_log_game_info(game_log: AIWolfGameLog, settings_path: Path) -> GameInfo:
-    """ゲーム情報の検出とログ出力"""
+class GameProcessor:
+    """単一ゲームの処理を担当するクラス"""
+    
+    def process(self, game_log: AIWolfGameLog, output_dir: Path) -> bool:
+        """ゲームログを処理して評価結果を出力"""
+        
+    def _execute_evaluations(
+        self,
+        evaluation_config: EvaluationConfig,
+        game_info: GameInfo,
+        formatted_data: list[dict[str, Any]]
+    ) -> EvaluationResult:
+        """評価を並列実行（ThreadPoolExecutor使用）"""
 
-def _execute_evaluations(
-    evaluation_config: EvaluationConfig, 
-    game_info: GameInfo, 
-    formatted_data: list[dict[str, Any]], 
-    evaluator: Evaluator
-) -> EvaluationResult:
-    """各評価基準に対する評価の実行"""
+class BatchProcessor:
+    """バッチ処理を管理するクラス"""
+    
+    def process_all_games(self) -> ProcessingResult:
+        """すべてのゲームログを並列処理"""
+        
+    def _execute_parallel_processing(self, game_logs: list[AIWolfGameLog]) -> ProcessingResult:
+        """並列処理を実行（ProcessPoolExecutor使用）"""
 ```
 
 ## データファイル配置
@@ -429,7 +461,7 @@ python main.py
 ### 実装状況
 - **main.py**: エントリーポイント、`src.cli.main()` を呼び出し
 - **src/cli.py**: コマンドライン引数の解析、設定読み込み、バッチ処理の実行
-- **src/processor.py**: 実際の並列処理実装（関数ベース）
+- **src/processor.py**: 実際の並列処理実装（クラスベース）
 
 ## 今後の実装予定
 
