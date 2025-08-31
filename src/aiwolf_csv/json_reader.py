@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 
 class AIWolfJSONReader:
@@ -47,7 +47,7 @@ class AIWolfJSONReader:
         return self._data
 
     @classmethod
-    def from_log_path(cls, log_path: Path) -> "AIWolfJSONReader":
+    def from_log_path(cls, log_path: Path) -> Self:
         """ログファイルパスから対応するJSONファイルのリーダーを作成
 
         hoge.logに対応するhoge.jsonを読み込む
