@@ -87,9 +87,7 @@ class Evaluator:
 
         message: ChatCompletionUserMessageParam = {
             "content": template.render(
-                criteria_name=criteria.name,
                 criteria_description=criteria.description,
-                ranking_type=criteria.ranking_type.value,
                 log=json.dumps(log, ensure_ascii=False),
             ).strip(),
             "role": "user",
