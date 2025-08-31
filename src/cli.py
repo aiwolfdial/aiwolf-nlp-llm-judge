@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import yaml
 
-from src.processor import process_all_games
+from src.processor import BatchProcessor
 
 
 def setup_logging() -> None:
@@ -44,8 +44,16 @@ def main() -> None:
     except Exception as e:
         raise RuntimeError(f"設定ファイルの読み込みに失敗しました: {e}")
 
+    # settings_pathを設定に追加
+    config["settings_path"] = str(args.config)
+
     # バッチ処理の実行
-    process_all_games(config)
+    processor = BatchProcessor(config)
+    result = processor.process_all_games()
+
+    logging.info(
+        f"処理完了 - 成功: {result.completed}/{result.total}, 成功率: {result.success_rate:.2%}"
+    )
 
 
 if __name__ == "__main__":

@@ -56,10 +56,6 @@ class Evaluator:
         log: list[dict[str, Any]],
         output_structure: type[BaseModel],
     ) -> BaseModel:
-        print(self._developer_message())
-        print(self._user_message(criteria=criteria, log=log))
-        return
-
         response = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[
