@@ -15,3 +15,15 @@ class EvaluationLLMResponse(BaseModel):
     """LLMからの評価レスポンス全体"""
 
     rankings: list[EvaluationElement] = Field(description="各プレイヤーに対する評価")
+
+    def __iter__(self):
+        """リストのように反復処理可能にする"""
+        return iter(self.rankings)
+
+    def __len__(self):
+        """リストのようにlen()を使用可能にする"""
+        return len(self.rankings)
+
+    def __getitem__(self, index):
+        """リストのようにインデックスアクセス可能にする"""
+        return self.rankings[index]
