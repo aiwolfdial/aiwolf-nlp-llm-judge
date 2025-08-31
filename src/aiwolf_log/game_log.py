@@ -1,10 +1,11 @@
 """AIWolfのゲームログ（ログファイルとJSONファイル）を管理するモジュール"""
 
 from pathlib import Path
-from typing import Any, Self
+from typing import Any
+from typing_extensions import Self
 
-from src.aiwolf_csv.csv_reader import AIWolfCSVReader
-from src.aiwolf_csv.json_reader import AIWolfJSONReader
+from src.aiwolf_log.csv_reader import AIWolfCSVReader
+from src.aiwolf_log.json_reader import AIWolfJSONReader
 
 
 class AIWolfGameLogError(Exception):
@@ -107,34 +108,6 @@ class AIWolfGameLog:
     def from_input_dir(cls, input_dir: Path, file_name: str) -> Self:
         """入力ディレクトリとファイル名からインスタンスを作成"""
         return cls(input_dir=input_dir, file_name=file_name)
-
-    @classmethod
-    def find_all_game_logs(cls, input_dir: Path) -> list[Self]:
-        """指定ディレクトリ内のすべてのゲームログを検索
-
-        Args:
-            input_dir: inputディレクトリのパス
-
-        Returns:
-            AIWolfGameLogインスタンスのリスト
-        """
-        game_logs = []
-        log_dir = input_dir / "log"
-
-        if not log_dir.exists():
-            return game_logs
-
-        # ログファイルをベースにペアを探す
-        for log_path in log_dir.glob("*.log"):
-            try:
-                file_name = log_path.stem
-                game_log = cls.from_input_dir(input_dir, file_name)
-                game_logs.append(game_log)
-            except (FileNotFoundError, AIWolfGameLogError):
-                # 対応するJSONファイルがない場合はスキップ
-                continue
-
-        return game_logs
 
     def __repr__(self) -> str:
         return f"AIWolfGameLog(game_id='{self.game_id}', log='{self.log_path}', json='{self.json_path}')"

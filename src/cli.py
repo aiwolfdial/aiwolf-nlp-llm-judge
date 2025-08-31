@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import yaml
 
-from src.processor.batch_processor import BatchProcessor
+from src.processor import process_all_games
 
 
 def setup_logging() -> None:
@@ -48,8 +48,7 @@ def main() -> None:
     input_dir = Path("data/input")
     output_dir = Path("data/output")
 
-    processor = BatchProcessor(config)
-    processor.process_all_games(input_dir, output_dir)
+    process_all_games(input_dir, output_dir, config)
 
 
 if __name__ == "__main__":

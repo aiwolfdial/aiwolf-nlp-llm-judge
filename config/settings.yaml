@@ -12,7 +12,7 @@ llm:
 # ゲーム形式設定
 game:
   format: "main_match"  # main_match または self_match
-  participant_num: "5_player"  # 5_player または 13_player
+  player_count: 5  # プレイヤー数（5, 13など）
 
 # 処理設定
 processing:

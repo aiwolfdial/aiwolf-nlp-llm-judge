@@ -1,8 +1,6 @@
-from src.models.game import GameFormat, GameInfo, ParticipantNum
+from src.models.game import GameFormat, GameInfo
 from src.models.evaluation import (
     EvaluationCriteria,
-    EvaluationScore,
-    ScoreType,
     EvaluationResult,
     EvaluationConfig,
 )
@@ -10,10 +8,7 @@ from src.models.evaluation import (
 __all__ = [
     "GameFormat",
     "GameInfo",
-    "ParticipantNum",
     "EvaluationCriteria",
-    "EvaluationScore",
-    "ScoreType",
     "EvaluationResult",
     "EvaluationConfig",
 ]

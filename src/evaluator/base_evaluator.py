@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from models.game import GameInfo
-from models.evaluation import (
+from src.models.game import GameInfo
+from src.models.evaluation import (
     EvaluationResult,
     EvaluationConfig,
     EvaluationLLMResponse,

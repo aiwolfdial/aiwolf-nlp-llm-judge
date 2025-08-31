@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 
-from src.aiwolf_csv.parser import AIWolfCSVParser
+from src.aiwolf_log.parser import AIWolfCSVParser
 from src.models.game import GameInfo
 from src.evaluator.config_loader import ConfigLoader
 

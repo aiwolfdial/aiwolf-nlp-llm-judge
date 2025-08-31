@@ -4,18 +4,11 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from src.aiwolf_csv.game_log import AIWolfGameLog
+from src.aiwolf_log.game_log import AIWolfGameLog
+from src.utils.game_log_finder import find_all_game_logs
 
 
 logger = logging.getLogger(__name__)
-
-
-def find_all_game_logs(input_dir: Path) -> list[AIWolfGameLog]:
-    """指定ディレクトリからすべてのゲームログを検索"""
-    logger.info(f"Searching for game logs in: {input_dir}")
-    game_logs = AIWolfGameLog.find_all_game_logs(input_dir)
-    logger.info(f"Found {len(game_logs)} game logs")
-    return game_logs
 
 
 def process_all_games(
@@ -35,7 +28,9 @@ def process_all_games(
     max_workers = max_workers or mp.cpu_count()
     logger.info(f"Starting batch processing with {max_workers} workers")
 
+    logger.info(f"Searching for game logs in: {input_dir}")
     game_logs = find_all_game_logs(input_dir)
+    logger.info(f"Found {len(game_logs)} game logs")
 
     if not game_logs:
         logger.warning("No game logs found")

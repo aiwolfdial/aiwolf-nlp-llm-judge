@@ -1,13 +1,13 @@
 import yaml
 from pathlib import Path
 
-from models.evaluation import (
+from src.models.evaluation import (
     EvaluationConfig,
     EvaluationCriteria,
     RankingType,
     CriteriaCategory,
 )
-from models.game import GameFormat
+from src.models.game import GameFormat
 
 
 class ConfigLoader:

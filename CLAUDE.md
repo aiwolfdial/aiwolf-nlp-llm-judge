@@ -26,12 +26,15 @@ aiwolf-nlp-llm-judge/
     ├── __init__.py
     ├── cli.py                      # CLIインターフェース
     ├── processor.py                # バッチ処理（関数ベース）
-    ├── aiwolf_csv/                 # CSV解析モジュール
+    ├── aiwolf_log/                 # ログファイル解析モジュール
     │   ├── __init__.py
     │   ├── parser.py              # CSVパーサー
     │   ├── csv_reader.py          # CSV読み込み
     │   ├── json_reader.py         # JSON読み込み
     │   └── game_log.py            # ログ・JSONペア管理
+    ├── utils/                     # ユーティリティモジュール
+    │   ├── __init__.py
+    │   └── game_log_finder.py     # ゲームログ検索機能
     ├── evaluator/                 # 評価モジュール
     │   ├── __init__.py
     │   ├── config_loader.py       # 設定読み込み
@@ -227,9 +230,6 @@ class AIWolfGameLog:
     def get_character_info(self) -> dict[str, Any]:
         """キャラクター情報を取得"""
     
-    @classmethod
-    def find_all_game_logs(cls, input_dir: Path) -> list["AIWolfGameLog"]:
-        """指定ディレクトリ内のすべてのゲームログを検索"""
 ```
 
 ## 使用方法
@@ -276,7 +276,8 @@ with game_log.get_csv_reader(config) as reader:
 ### 4. 複数ゲームログの一括取得
 ```python
 # すべてのゲームログを検索
-game_logs = AIWolfGameLog.find_all_game_logs(Path("data/input"))
+from src.utils.game_log_finder import find_all_game_logs
+game_logs = find_all_game_logs(Path("data/input"))
 for game_log in game_logs:
     print(f"Processing game: {game_log.game_id}")
 ```
