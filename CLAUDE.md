@@ -349,7 +349,12 @@ result = evaluator.evaluate(game_log, game_info)
   - [x] `game_log.py`の設定パラメータ型改善
   - [x] `llm/evaluator.py`および`llm/formatter.py`の型ヒント改善
   - [x] 既存の`EvaluationConfig`、`GameInfo`型の活用
-- [ ] LLM評価エンジン実装
+- [x] バグ修正
+  - [x] 設定ファイルパスの重複問題修正（`config/config/evaluation_criteria.yaml` → `config/evaluation_criteria.yaml`）
+  - [x] CSVリーダーのコンテキストマネージャー対応修正
+- [x] LLM評価エンジン実装
+  - [x] ゲームログのJSONL形式変換（`llm/formatter.py`）
+  - [x] LLM評価器の基本実装（`llm/evaluator.py`）
 - [ ] プロンプト設計
 - [ ] レポート生成機能
 - [ ] テスト実装
@@ -411,11 +416,14 @@ data/
 
 ### 基本的な使用方法
 ```bash
-# プロジェクトの実行
-python main.py
+# プロジェクトの実行（設定ファイル指定）
+uv run python3 main.py -c config/settings.yaml
 
 # または直接CLIを実行
 python -m src.cli
+
+# デフォルト設定での実行
+python main.py
 ```
 
 ### 実装状況

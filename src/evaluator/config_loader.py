@@ -105,8 +105,13 @@ class ConfigLoader:
         if not evaluation_criteria_path:
             raise ValueError("evaluation_criteria path not found in settings")
 
-        # 相対パスの場合、settings.yamlからの相対パスとして解釈
-        criteria_path = settings_path.parent / evaluation_criteria_path
+        # 相対パスの場合、プロジェクトルートからの相対パスとして解釈
+        if Path(evaluation_criteria_path).is_absolute():
+            criteria_path = Path(evaluation_criteria_path)
+        else:
+            # プロジェクトルートを取得（settings.yamlの親の親ディレクトリ）
+            project_root = settings_path.parent.parent
+            criteria_path = project_root / evaluation_criteria_path
 
         return ConfigLoader.load_evaluation_config(criteria_path)
 

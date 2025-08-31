@@ -62,9 +62,8 @@ class AIWolfGameLog:
         Returns:
             AIWolfCSVReaderインスタンス
         """
-        if self._csv_reader is None:
-            self._csv_reader = AIWolfCSVReader(config, self.log_path)
-        return self._csv_reader
+        # 新しいインスタンスを毎回作成（コンテキストマネージャーで適切に管理するため）
+        return AIWolfCSVReader(config, self.log_path)
 
     def get_json_reader(self) -> AIWolfJSONReader:
         """JSONリーダーを取得.
