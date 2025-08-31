@@ -242,7 +242,7 @@ class AIWolfGameLog:
     def game_id(self) -> str:
         """ゲームIDをJSONから取得"""
     
-    def get_csv_reader(self, config: dict) -> AIWolfCSVReader:
+    def get_csv_reader(self, config: dict[str, Any]) -> AIWolfCSVReader:
         """CSVリーダーを取得"""
     
     def get_json_reader(self) -> AIWolfJSONReader:
@@ -317,6 +317,7 @@ result = evaluator.evaluate(game_log, game_info)
 - **データクラス**: `@dataclass` を活用した型安全な設計
 - **Enum**: 定数値の管理（`GameFormat`, `RankingType`, `CriteriaCategory`）
 - **Pydantic**: LLMレスポンスのバリデーション（`BaseModel`）
+- **型安全性**: `Any`型を可能な限り排除し、具体的な型ヒントを使用
 
 ## 開発ステータス
 
@@ -343,6 +344,11 @@ result = evaluator.evaluate(game_log, game_info)
   - [x] 関数ベースの並列処理実装（`processor.py`）
   - [x] CLIインターフェース（`cli.py`）
   - [x] プロジェクトエントリーポイント（`main.py`）
+- [x] 型安全性の改善
+  - [x] `processor.py`の型ヒント改善（`Any`型を具体的な型に変更）
+  - [x] `game_log.py`の設定パラメータ型改善
+  - [x] `llm/evaluator.py`および`llm/formatter.py`の型ヒント改善
+  - [x] 既存の`EvaluationConfig`、`GameInfo`型の活用
 - [ ] LLM評価エンジン実装
 - [ ] プロンプト設計
 - [ ] レポート生成機能
@@ -353,12 +359,7 @@ result = evaluator.evaluate(game_log, game_info)
 def find_all_game_logs(input_dir: Path) -> list[AIWolfGameLog]:
     """指定ディレクトリからすべてのゲームログを検索"""
     
-def process_all_games(
-    input_dir: Path, 
-    output_dir: Path, 
-    config: dict[str, Any], 
-    max_workers: int | None = None
-) -> None:
+def process_all_games(config: dict[str, Any]) -> None:
     """すべてのゲームログを並列処理で評価"""
     
 def process_single_game(
@@ -367,6 +368,21 @@ def process_single_game(
     output_dir: Path
 ) -> bool:
     """単一ゲームの処理（プロセス間で実行される関数）"""
+
+# 主要な内部関数（型安全性改善済み）
+def _load_evaluation_configs(settings_path: Path) -> EvaluationConfig:
+    """評価設定とゲーム情報の読み込み"""
+
+def _detect_and_log_game_info(game_log: AIWolfGameLog, settings_path: Path) -> GameInfo:
+    """ゲーム情報の検出とログ出力"""
+
+def _execute_evaluations(
+    evaluation_config: EvaluationConfig, 
+    game_info: GameInfo, 
+    formatted_data: list[dict[str, Any]], 
+    evaluator: Evaluator
+) -> EvaluationResult:
+    """各評価基準に対する評価の実行"""
 ```
 
 ## データファイル配置

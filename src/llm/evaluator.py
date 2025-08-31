@@ -1,4 +1,5 @@
 import os
+from typing import Any
 from dotenv import load_dotenv
 from pathlib import Path
 from jinja2 import Template
@@ -19,7 +20,7 @@ import yaml
 class Evaluator:
     """評価クラス."""
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict[str, Any]):
         try:
             env_path = Path(config["path"]["env"])
             prompt_yml_path = Path(config["llm"]["prompt_yml"])
@@ -50,7 +51,10 @@ class Evaluator:
         self.client = OpenAI(api_key=api_key)
 
     def evaluation(
-        self, criteria: EvaluationCriteria, log: dict, output_structure: type[BaseModel]
+        self,
+        criteria: EvaluationCriteria,
+        log: list[dict[str, Any]],
+        output_structure: type[BaseModel],
     ) -> BaseModel:
         response = self.client.beta.chat.completions.parse(
             model=self.model,
@@ -73,7 +77,7 @@ class Evaluator:
         return message
 
     def _user_message(
-        self, criteria: EvaluationCriteria, log: dict
+        self, criteria: EvaluationCriteria, log: list[dict[str, Any]]
     ) -> ChatCompletionUserMessageParam:
         template: Template = Template(self.prompt_template["user"])
 

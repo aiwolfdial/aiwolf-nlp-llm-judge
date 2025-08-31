@@ -6,7 +6,8 @@ from typing import Any
 import json
 
 from src.aiwolf_log.game_log import AIWolfGameLog
-from src.models.game import GameFormat
+from src.models.game import GameFormat, GameInfo
+from src.models.evaluation.config import EvaluationConfig
 from src.utils.game_log_finder import find_all_game_logs
 from src.evaluator.config_loader import ConfigLoader
 from src.evaluator.game_detector import GameDetector
@@ -98,14 +99,14 @@ def process_all_games(config: dict[str, Any]) -> None:
     logger.info(f"Batch processing completed. Success: {completed}, Failed: {failed}")
 
 
-def _load_evaluation_configs(settings_path: Path) -> tuple[Any, Any]:
+def _load_evaluation_configs(settings_path: Path) -> EvaluationConfig:
     """評価設定とゲーム情報の読み込み."""
     evaluation_config = ConfigLoader.load_from_settings(settings_path)
     logger.info(f"Loaded evaluation config with {len(evaluation_config)} criteria")
     return evaluation_config
 
 
-def _detect_and_log_game_info(game_log: AIWolfGameLog, settings_path: Path) -> Any:
+def _detect_and_log_game_info(game_log: AIWolfGameLog, settings_path: Path) -> GameInfo:
     """ゲーム情報の検出とログ出力."""
     game_info = GameDetector.detect_game_format(game_log.log_path, settings_path)
     logger.info(
@@ -115,8 +116,8 @@ def _detect_and_log_game_info(game_log: AIWolfGameLog, settings_path: Path) -> A
 
 
 def _format_game_log(
-    game_log: AIWolfGameLog, config: dict[str, Any], game_info: Any
-) -> list[str]:
+    game_log: AIWolfGameLog, config: dict[str, Any], game_info: GameInfo
+) -> list[dict[str, Any]]:
     """ゲームログのフォーマット変換."""
     formatter = GameLogFormatter(game_log, config, parser=None)
     formatted_data = formatter.convert_to_jsonl(game_info.game_format)
@@ -125,7 +126,10 @@ def _format_game_log(
 
 
 def _execute_evaluations(
-    evaluation_config: Any, game_info: Any, formatted_data: list[str], evaluator: Any
+    evaluation_config: EvaluationConfig,
+    game_info: GameInfo,
+    formatted_data: list[dict[str, Any]],
+    evaluator: Evaluator,
 ) -> EvaluationResult:
     """各評価基準に対する評価の実行."""
     evaluation_result = EvaluationResult()
@@ -147,7 +151,7 @@ def _execute_evaluations(
 
 
 def _build_result_data(
-    game_log: AIWolfGameLog, game_info: Any, evaluation_result: EvaluationResult
+    game_log: AIWolfGameLog, game_info: GameInfo, evaluation_result: EvaluationResult
 ) -> dict[str, Any]:
     """評価結果データの構築."""
     result_data = {

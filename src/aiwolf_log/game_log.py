@@ -53,7 +53,7 @@ class AIWolfGameLog:
         if not self.json_path.exists():
             raise FileNotFoundError(f"JSON file not found: {self.json_path}")
 
-    def get_csv_reader(self, config: dict) -> AIWolfCSVReader:
+    def get_csv_reader(self, config: dict[str, Any]) -> AIWolfCSVReader:
         """CSVリーダーを取得.
 
         Args:
