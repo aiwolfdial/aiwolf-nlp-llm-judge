@@ -29,8 +29,8 @@ class GameConfig:
 
 
 @dataclass(frozen=True)
-class ProcessingConfig:
-    """処理設定."""
+class AppProcessingConfig:
+    """アプリケーション処理設定."""
 
     input_dir: Path
     output_dir: Path
@@ -44,7 +44,7 @@ class AppConfig:
     path: PathConfig
     llm: LLMConfig
     game: GameConfig
-    processing: ProcessingConfig
+    processing: AppProcessingConfig
 
     @classmethod
     def from_dict(cls, config_dict: dict) -> "AppConfig":
@@ -64,7 +64,7 @@ class AppConfig:
             player_count=config_dict["game"]["player_count"],
         )
 
-        processing_config = ProcessingConfig(
+        processing_config = AppProcessingConfig(
             input_dir=Path(config_dict["processing"]["input_dir"]),
             output_dir=Path(config_dict["processing"]["output_dir"]),
             max_workers=config_dict["processing"]["max_workers"],

@@ -73,7 +73,7 @@ class Evaluator:
     def _developer_message(self) -> ChatCompletionDeveloperMessageParam:
         template: Template = Template(self.prompt_template["developer"])
 
-        print(template.render().strip())
+        # print(template.render().strip())
 
         message: ChatCompletionDeveloperMessageParam = {
             "content": template.render().strip(),
@@ -89,13 +89,13 @@ class Evaluator:
     ) -> ChatCompletionUserMessageParam:
         template: Template = Template(self.prompt_template["user"])
 
-        print(
-            template.render(
-                character_info=character_info,
-                criteria_description=criteria.description,
-                log=json.dumps(log, ensure_ascii=False),
-            ).strip()
-        )
+        # print(
+        #     template.render(
+        #         character_info=character_info,
+        #         criteria_description=criteria.description,
+        #         log=json.dumps(log, ensure_ascii=False),
+        #     ).strip()
+        # )
 
         message: ChatCompletionUserMessageParam = {
             "content": template.render(
