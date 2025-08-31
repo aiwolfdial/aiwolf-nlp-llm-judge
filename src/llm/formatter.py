@@ -141,9 +141,12 @@ class GameLogFormatter:
                         if player_index and player_name:
                             mapping[player_index] = player_name
 
-        except Exception:
-            # ログの読み込みに失敗した場合は空のマッピング
-            pass
+        except FileNotFoundError as e:
+            logger.warning(f"Log file not found: {e}")
+        except PermissionError as e:
+            logger.error(f"Permission denied reading log file: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error reading log file: {e}")
 
         return mapping
 

@@ -1,3 +1,1 @@
-"""AIWolf NLP LLM Judge メインモジュール."""
-
-__all__ = []
+"""AIWolf NLP LLM Judge パッケージ."""

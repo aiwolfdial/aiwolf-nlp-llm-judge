@@ -1,9 +1,6 @@
-import sys
-from pathlib import Path
+"""AIWolf NLP LLM Judge エントリーポイント."""
 
-# プロジェクトルートをPythonパスに追加
-sys.path.insert(0, str(Path(__file__).parent))
-
+import logging
 from src.cli import main, setup_logging
 
 if __name__ == "__main__":
@@ -11,11 +8,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        import logging
-
         logging.info("処理が中断されました")
     except Exception as e:
-        import logging
-
-        logging.error(f"エラーが発生しました: {e}")
+        logging.error(f"エラーが発生しました: {e}", exc_info=True)
         exit(1)

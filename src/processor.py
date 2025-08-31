@@ -80,9 +80,19 @@ class GameProcessor:
             logger.info(f"Successfully processed game: {game_log.game_id}")
             return True
 
+        except FileNotFoundError as e:
+            logger.error(f"Required file not found for game {game_log.game_id}: {e}")
+            return False
+        except ValueError as e:
+            logger.error(f"Invalid data in game {game_log.game_id}: {e}")
+            return False
+        except KeyError as e:
+            logger.error(f"Missing required key in game {game_log.game_id}: {e}")
+            return False
         except Exception as e:
             logger.error(
-                f"Failed to process game {game_log.game_id}: {e}", exc_info=True
+                f"Unexpected error processing game {game_log.game_id}: {e}", 
+                exc_info=True
             )
             return False
 
@@ -134,8 +144,9 @@ class GameProcessor:
         evaluator = Evaluator(self.config)
         evaluation_result = EvaluationResult()
 
-        # ThreadPoolExecutorを使用した並列評価
-        with ThreadPoolExecutor(max_workers=len(criteria_for_game)) as executor:
+        # ThreadPoolExecutorを使用した並列評価（最大スレッド数を制限）
+        max_workers = min(len(criteria_for_game), 8)  # 最大8スレッドに制限
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # タスク投入
             future_to_criteria = {
                 executor.submit(
@@ -198,6 +209,18 @@ class GameProcessor:
         evaluation_result: EvaluationResult,
     ) -> dict[str, Any]:
         """評価結果データを構築"""
+        # プレイヤー名からチーム名へのマッピングを取得
+        json_reader = game_log.get_json_reader()
+        player_to_team = json_reader.get_agent_to_team_mapping()
+        
+        # デバッグ用ログ
+        logger.debug(f"Player to team mapping: {player_to_team}")
+        if evaluation_result.get_all_criteria_names():
+            sample_criteria = evaluation_result.get_all_criteria_names()[0]
+            sample_response = evaluation_result.get_by_criteria(sample_criteria)
+            if sample_response.rankings:
+                logger.debug(f"Sample player names from LLM: {[elem.player_name for elem in sample_response.rankings[:3]]}")
+
         result_data = {
             "game_id": game_log.game_id,
             "game_info": {
@@ -213,6 +236,7 @@ class GameProcessor:
                 "rankings": [
                     {
                         "player_name": elem.player_name,
+                        "team": player_to_team.get(elem.player_name, "unknown"),
                         "ranking": elem.ranking,
                         "reasoning": elem.reasoning,
                     }
@@ -312,13 +336,13 @@ class BatchProcessor:
             output_dir = Path(processing_config["output_dir"])
             max_workers = processing_config.get("max_workers") or mp.cpu_count()
 
-            # ゲーム形式を文字列からEnumに変換
+            # ゲーム形式を文字列からEnumに変換（無効な値の場合は処理を停止）
             game_format_str = config.get("game", {}).get("format", "self_match")
             try:
                 game_format = GameFormat(game_format_str)
-            except ValueError:
-                logger.warning(f"Invalid game format: {game_format_str}, using default")
-                game_format = GameFormat.SELF_MATCH
+            except ValueError as e:
+                logger.error(f"Invalid game format: '{game_format_str}'. Valid values are: {[fmt.value for fmt in GameFormat]}")
+                raise ValueError(f"Invalid game format '{game_format_str}' in configuration") from e
 
             return ProcessingConfig(
                 input_dir=input_dir,

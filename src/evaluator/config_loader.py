@@ -144,9 +144,11 @@ class ConfigLoader:
         # 共通評価基準の読み込み
         common_criteria_data = config_data.get("common_criteria", [])
         for criteria_dict in common_criteria_data:
+            # applicable_gamesから取得、なければデフォルトの[5, 13]
+            applicable_games = criteria_dict.get("applicable_games", [5, 13])
             criteria = ConfigLoader._load_criteria_dict(
                 criteria_dict,
-                [5, 13],  # 全プレイヤー数に適用
+                applicable_games,
                 CriteriaCategory.COMMON,
             )
             all_criteria.append(criteria)
@@ -156,14 +158,20 @@ class ConfigLoader:
 
         for player_count_str, criteria_list in specific_data.items():
             try:
-                player_count = int(player_count_str.rstrip("_player"))
+                # より柔軟なパース（例: "13_player", "13-player", "13"）
+                import re
+                match = re.search(r"(\d+)", player_count_str)
+                if not match:
+                    raise ValueError(f"No player count found in: {player_count_str}")
+                
+                player_count = int(match.group(1))
                 for criteria_dict in criteria_list:
                     criteria = ConfigLoader._load_criteria_dict(
                         criteria_dict, [player_count], CriteriaCategory.GAME_SPECIFIC
                     )
                     all_criteria.append(criteria)
-            except ValueError:
-                raise ValueError(f"Invalid player count format: {player_count_str}")
+            except (ValueError, AttributeError) as e:
+                raise ValueError(f"Invalid player count format '{player_count_str}': {e}")
 
         return EvaluationConfig(all_criteria)
 
