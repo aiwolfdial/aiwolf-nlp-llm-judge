@@ -55,12 +55,15 @@ class Evaluator:
         criteria: EvaluationCriteria,
         log: list[dict[str, Any]],
         output_structure: type[BaseModel],
+        character_info: str = "",
     ) -> BaseModel:
         response = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[
                 self._developer_message(),
-                self._user_message(criteria=criteria, log=log),
+                self._user_message(
+                    criteria=criteria, log=log, character_info=character_info
+                ),
             ],
             response_format=output_structure,
         )
@@ -70,6 +73,8 @@ class Evaluator:
     def _developer_message(self) -> ChatCompletionDeveloperMessageParam:
         template: Template = Template(self.prompt_template["developer"])
 
+        print(template.render().strip())
+
         message: ChatCompletionDeveloperMessageParam = {
             "content": template.render().strip(),
             "role": "developer",
@@ -77,12 +82,24 @@ class Evaluator:
         return message
 
     def _user_message(
-        self, criteria: EvaluationCriteria, log: list[dict[str, Any]]
+        self,
+        criteria: EvaluationCriteria,
+        log: list[dict[str, Any]],
+        character_info: str = "",
     ) -> ChatCompletionUserMessageParam:
         template: Template = Template(self.prompt_template["user"])
 
+        print(
+            template.render(
+                character_info=character_info,
+                criteria_description=criteria.description,
+                log=json.dumps(log, ensure_ascii=False),
+            ).strip()
+        )
+
         message: ChatCompletionUserMessageParam = {
             "content": template.render(
+                character_info=character_info,
                 criteria_description=criteria.description,
                 log=json.dumps(log, ensure_ascii=False),
             ).strip(),
