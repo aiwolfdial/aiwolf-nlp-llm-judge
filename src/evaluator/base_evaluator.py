@@ -5,8 +5,8 @@ from models.game import GameInfo
 from models.evaluation import (
     EvaluationResult,
     EvaluationConfig,
-    EvaluationScore,
-    ScoreType,
+    EvaluationRanking,
+    CriteriaCategory,
 )
 
 
@@ -35,13 +35,17 @@ class BaseEvaluator(ABC):
         pass
 
     def _create_evaluation_result(
-        self, game_info: GameInfo, scores: dict[str, float]
+        self,
+        game_info: GameInfo,
+        rankings: dict[str, EvaluationRanking],
+        evaluation_targets: list[str],
     ) -> EvaluationResult:
         """評価結果オブジェクトを作成
 
         Args:
             game_info: ゲーム情報
-            scores: 評価スコア辞書（基準名: スコア値）
+            rankings: 評価ランキング辞書（基準名: ランキング）
+            evaluation_targets: 評価対象のIDリスト
 
         Returns:
             EvaluationResult: 作成された評価結果
@@ -49,77 +53,61 @@ class BaseEvaluator(ABC):
         # 該当プレイヤー数の全評価基準を取得
         all_criteria = self.config.get_criteria_for_game(game_info.player_count)
 
-        common_scores = {}
-        specific_scores = {}
+        common_rankings = {}
+        specific_rankings = {}
 
         # 共通基準と固有基準を分離
-        # 全プレイヤー数に適用される基準を共通基準とする
-        all_player_counts = [5, 13]
-        common_criteria_names = {
-            c.name
-            for c in self.config
-            if all(count in c.applicable_games for count in all_player_counts)
-        }
-
         for criteria in all_criteria:
-            if criteria.name not in scores:
-                raise ValueError(f"Missing score for criteria: {criteria.name}")
+            if criteria.name not in rankings:
+                raise ValueError(f"Missing ranking for criteria: {criteria.name}")
 
-            score_value = scores[criteria.name]
+            ranking = rankings[criteria.name]
 
-            # 型変換
-            if criteria.score_type == ScoreType.INT:
-                score_value = int(score_value)
+            if criteria.category == CriteriaCategory.COMMON:
+                common_rankings[criteria.name] = ranking
             else:
-                score_value = float(score_value)
-
-            evaluation_score = EvaluationScore(
-                criteria_name=criteria.name,
-                value=score_value,
-                min_value=criteria.min_value,
-                max_value=criteria.max_value,
-                score_type=criteria.score_type,
-            )
-
-            if criteria.name in common_criteria_names:
-                common_scores[criteria.name] = evaluation_score
-            else:
-                specific_scores[criteria.name] = evaluation_score
+                specific_rankings[criteria.name] = ranking
 
         return EvaluationResult(
             game_info=game_info,
-            common_scores=common_scores,
-            specific_scores=specific_scores,
+            common_rankings=common_rankings,
+            specific_rankings=specific_rankings,
+            evaluation_targets=evaluation_targets,
         )
 
-    def _validate_scores(self, scores: dict[str, float], game_info: GameInfo) -> None:
-        """スコアの妥当性をチェック
+    def _validate_rankings(
+        self,
+        rankings: dict[str, EvaluationRanking],
+        game_info: GameInfo,
+        evaluation_targets: list[str],
+    ) -> None:
+        """ランキングの妥当性をチェック
 
         Args:
-            scores: 評価スコア辞書
+            rankings: 評価ランキング辞書
             game_info: ゲーム情報
+            evaluation_targets: 評価対象のIDリスト
 
         Raises:
-            ValueError: スコアが不正な場合
+            ValueError: ランキングが不正な場合
         """
         expected_criteria = self.config.get_criteria_for_game(game_info.player_count)
         expected_names = {c.name for c in expected_criteria}
 
         # 不足している基準をチェック
-        missing_criteria = expected_names - set(scores.keys())
+        missing_criteria = expected_names - set(rankings.keys())
         if missing_criteria:
-            raise ValueError(f"Missing scores for criteria: {missing_criteria}")
+            raise ValueError(f"Missing rankings for criteria: {missing_criteria}")
 
         # 余分な基準をチェック
-        extra_criteria = set(scores.keys()) - expected_names
+        extra_criteria = set(rankings.keys()) - expected_names
         if extra_criteria:
-            raise ValueError(f"Unexpected criteria in scores: {extra_criteria}")
+            raise ValueError(f"Unexpected criteria in rankings: {extra_criteria}")
 
-        # スコア値の範囲チェック
-        for criteria in expected_criteria:
-            score_value = scores[criteria.name]
-            if not (criteria.min_value <= score_value <= criteria.max_value):
+        # 各ランキングの整合性チェック
+        for criteria_name, ranking in rankings.items():
+            # ランキングに全ての評価対象が含まれているか
+            if set(ranking.rankings) != set(evaluation_targets):
                 raise ValueError(
-                    f"Score for '{criteria.name}' ({score_value}) is out of range "
-                    f"[{criteria.min_value}, {criteria.max_value}]"
+                    f"Ranking for '{criteria_name}' does not contain all evaluation targets"
                 )

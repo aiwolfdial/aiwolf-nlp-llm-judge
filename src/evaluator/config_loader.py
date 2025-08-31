@@ -1,7 +1,12 @@
 import yaml
 from pathlib import Path
 
-from models.evaluation import EvaluationConfig, EvaluationCriteria, ScoreType
+from models.evaluation import (
+    EvaluationConfig,
+    EvaluationCriteria,
+    RankingType,
+    CriteriaCategory,
+)
 from models.game import GameFormat
 
 
@@ -137,6 +142,7 @@ class ConfigLoader:
             criteria = ConfigLoader._load_criteria_dict(
                 criteria_dict,
                 [5, 13],  # 全プレイヤー数に適用
+                CriteriaCategory.COMMON,
             )
             all_criteria.append(criteria)
 
@@ -148,7 +154,7 @@ class ConfigLoader:
                 player_count = int(player_count_str.rstrip("_player"))
                 for criteria_dict in criteria_list:
                     criteria = ConfigLoader._load_criteria_dict(
-                        criteria_dict, [player_count]
+                        criteria_dict, [player_count], CriteriaCategory.GAME_SPECIFIC
                     )
                     all_criteria.append(criteria)
             except ValueError:
@@ -158,13 +164,14 @@ class ConfigLoader:
 
     @staticmethod
     def _load_criteria_dict(
-        criteria_dict: dict, applicable_games: list[int]
+        criteria_dict: dict, applicable_games: list[int], category: CriteriaCategory
     ) -> EvaluationCriteria:
         """評価基準辞書を読み込んでEvaluationCriteriaオブジェクトを作成
 
         Args:
             criteria_dict: YAML から読み込まれた評価基準データ
             applicable_games: この基準が適用されるプレイヤー数のリスト
+            category: 評価基準のカテゴリー
 
         Returns:
             EvaluationCriteria: 評価基準オブジェクト
@@ -175,27 +182,22 @@ class ConfigLoader:
         try:
             name = criteria_dict["name"]
             description = criteria_dict["description"]
-            scale = criteria_dict["scale"]
+            ranking_type = criteria_dict["ranking_type"]
 
-            min_value = scale["min"]
-            max_value = scale["max"]
-            score_type = scale["type"]
-
-            # 文字列をScoreType enumに変換
-            if score_type == "integer" or score_type == "int":
-                score_type_enum = ScoreType.INT
-            elif score_type == "float":
-                score_type_enum = ScoreType.FLOAT
+            # 文字列をRankingType enumに変換
+            if ranking_type == "ordinal":
+                ranking_type_enum = RankingType.ORDINAL
+            elif ranking_type == "comparative":
+                ranking_type_enum = RankingType.COMPARATIVE
             else:
-                raise ValueError(f"Invalid score type: {score_type}")
+                raise ValueError(f"Invalid ranking type: {ranking_type}")
 
             return EvaluationCriteria(
                 name=name,
                 description=description,
-                min_value=min_value,
-                max_value=max_value,
-                score_type=score_type_enum,
+                ranking_type=ranking_type_enum,
                 applicable_games=applicable_games,
+                category=category,
             )
 
         except KeyError as e:

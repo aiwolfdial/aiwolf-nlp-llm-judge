@@ -1,11 +1,17 @@
-from .criteria import EvaluationCriteria, EvaluationScore, ScoreType
+from .criteria import (
+    EvaluationCriteria,
+    EvaluationRanking,
+    RankingType,
+    CriteriaCategory,
+)
 from .result import EvaluationResult
 from .config import EvaluationConfig
 
 __all__ = [
     "EvaluationCriteria",
-    "EvaluationScore",
-    "ScoreType",
+    "EvaluationRanking",
+    "RankingType",
+    "CriteriaCategory",
     "EvaluationResult",
     "EvaluationConfig",
 ]

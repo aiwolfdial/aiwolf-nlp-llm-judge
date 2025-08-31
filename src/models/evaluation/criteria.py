@@ -2,11 +2,18 @@ from dataclasses import dataclass
 from enum import Enum
 
 
-class ScoreType(Enum):
-    """評価スコアの型を表す列挙型"""
+class RankingType(Enum):
+    """ランキングの型を表す列挙型"""
 
-    INT = "int"
-    FLOAT = "float"
+    ORDINAL = "ordinal"  # 順序付け（1位、2位...）
+    COMPARATIVE = "comparative"  # 比較ベース（A > B > C）
+
+
+class CriteriaCategory(Enum):
+    """評価基準のカテゴリーを表す列挙型"""
+
+    COMMON = "common"  # 全ゲーム形式共通
+    GAME_SPECIFIC = "game_specific"  # ゲーム形式固有
 
 
 @dataclass
@@ -15,37 +22,24 @@ class EvaluationCriteria:
 
     name: str
     description: str
-    min_value: int | float
-    max_value: int | float
-    score_type: ScoreType
+    ranking_type: RankingType
     applicable_games: list[int]
+    category: CriteriaCategory
 
 
 @dataclass
-class EvaluationScore:
-    """個別評価スコアを表すデータクラス"""
+class EvaluationRanking:
+    """個別評価ランキングを表すデータクラス"""
 
     criteria_name: str
-    value: int | float
-    min_value: int | float
-    max_value: int | float
-    score_type: ScoreType
+    rankings: list[str]  # 評価対象のIDリスト（高評価順）
+    ranking_type: RankingType
+    reasoning: dict[str, str]  # 各評価対象に対する理由
 
     def __post_init__(self):
-        """値の範囲チェックと型チェック"""
-        if self.score_type == ScoreType.INT and not isinstance(self.value, int):
-            raise TypeError(
-                f"Score type is {self.score_type.value} but value is {type(self.value)}"
-            )
+        """ランキングの整合性チェック"""
+        if len(self.rankings) != len(set(self.rankings)):
+            raise ValueError("Rankings contain duplicate entries")
 
-        if self.score_type == ScoreType.FLOAT and not isinstance(
-            self.value, (int, float)
-        ):
-            raise TypeError(
-                f"Score type is {self.score_type.value} but value is {type(self.value)}"
-            )
-
-        if not (self.min_value <= self.value <= self.max_value):
-            raise ValueError(
-                f"Score {self.value} is out of range [{self.min_value}, {self.max_value}]"
-            )
+        if set(self.rankings) != set(self.reasoning.keys()):
+            raise ValueError("Rankings and reasoning keys must match")

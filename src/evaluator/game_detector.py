@@ -1,6 +1,7 @@
 import csv
 from pathlib import Path
 
+from aiwolf_csv.parser import AIWolfCSVParser
 from models.game import GameInfo
 from .config_loader import ConfigLoader
 
@@ -47,23 +48,23 @@ class GameDetector:
             set[str]: プレイヤーインデックスのセット
         """
         player_indices = set()
+        parser = AIWolfCSVParser()
 
         try:
             with csv_path.open("r", encoding="utf-8") as f:
                 csv_reader = csv.reader(f)
 
                 for row in csv_reader:
-                    if len(row) < 5:
-                        continue
-
-                    # 行動タイプをチェック（会話系の行動のみを対象）
-                    action = row[1].lower() if len(row) > 1 else ""
-                    if action in ["talk", "whisper"]:
-                        # プレイヤーインデックスを抽出（4列目）
-                        if len(row) > 4:
-                            player_index = row[4]
+                    try:
+                        # パーサーを使用して会話行動かどうかを判定
+                        if parser._is_conversation_action(row):
+                            # パーサーを使用して発話者インデックスを取得
+                            player_index = parser.get_speaker_index(row)
                             if player_index:  # 空文字でない場合のみ追加
                                 player_indices.add(player_index)
+                    except (TypeError, ValueError):
+                        # パーサーで処理できない行はスキップ
+                        continue
 
         except Exception as e:
             raise ValueError(f"Failed to read CSV file: {e}")
