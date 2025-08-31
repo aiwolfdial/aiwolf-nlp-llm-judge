@@ -4,28 +4,28 @@
 common_criteria:
   - name: "natural_expression"
     description: "発話表現は自然か"
-    ranking_type: "comparative"
+    ranking_type: "ordinal"
     
   - name: "contextual_dialogue"
     description: "文脈を踏まえた対話は自然か"
-    ranking_type: "comparative"
+    ranking_type: "ordinal"
     
   - name: "logical_consistency"
     description: "発話内容は一貫しており矛盾がないか"
-    ranking_type: "comparative"
+    ranking_type: "ordinal"
     
   - name: "action_consistency"
     description: "ゲーム行動（投票、襲撃、占いなど）は対話内容を踏まえているか"
-    ranking_type: "comparative"
+    ranking_type: "ordinal"
   
   - name: "character_consistency"
     description: "発話表現は豊かか。与えられたプロフィールと矛盾なく、エージェントごとに一貫して豊かなキャラクター性が出ているか"
-    ranking_type: "comparative"
+    ranking_type: "ordinal"
 
 # ゲーム形式固有の評価項目
 game_specific_criteria:
   13_player:
     - name: "team_play"
       description: "チームプレイができているか"
-      ranking_type: "comparative"
+      ranking_type: "ordinal"
       applicable_games: [13]
