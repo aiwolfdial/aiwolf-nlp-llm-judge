@@ -11,21 +11,48 @@ from src.utils.game_log_finder import find_all_game_logs
 logger = logging.getLogger(__name__)
 
 
-def process_all_games(
-    input_dir: Path,
-    output_dir: Path,
-    config: dict[str, Any],
-    max_workers: int | None = None,
-) -> None:
+def _extract_processing_config(config: dict[str, Any]) -> tuple[Path, Path, int]:
+    """設定からprocessing関連の値を抽出"""
+    try:
+        processing_config = config["processing"]
+        input_dir = Path(processing_config["input_dir"])
+        output_dir = Path(processing_config["output_dir"])
+        max_workers = processing_config.get("max_workers") or mp.cpu_count()
+        return input_dir, output_dir, max_workers
+    except KeyError as e:
+        raise ValueError(f"Missing required config key: {e}")
+
+
+def _collect_processing_results(
+    futures: list[tuple[Any, AIWolfGameLog]],
+) -> tuple[int, int]:
+    """処理結果を収集して成功・失敗数をカウント"""
+    completed = 0
+    failed = 0
+
+    for future, game_log in futures:
+        try:
+            result = future.result()
+            if result:
+                completed += 1
+                logger.info(f"Completed processing: {game_log.game_id}")
+            else:
+                failed += 1
+                logger.error(f"Failed processing: {game_log.game_id}")
+        except Exception as e:
+            failed += 1
+            logger.error(f"Error processing {game_log.game_id}: {e}")
+
+    return completed, failed
+
+
+def process_all_games(config: dict[str, Any]) -> None:
     """すべてのゲームログを並列処理で評価
 
     Args:
-        input_dir: 入力ディレクトリ
-        output_dir: 出力ディレクトリ
-        config: 設定辞書
-        max_workers: 最大ワーカー数（Noneの場合はCPU数を使用）
+        config: 設定辞書（input_dir, output_dir, max_workersを含む）
     """
-    max_workers = max_workers or mp.cpu_count()
+    input_dir, output_dir, max_workers = _extract_processing_config(config)
     logger.info(f"Starting batch processing with {max_workers} workers")
 
     logger.info(f"Searching for game logs in: {input_dir}")
@@ -36,34 +63,19 @@ def process_all_games(
         logger.warning("No game logs found")
         return
 
-    # 出力ディレクトリの作成
     output_dir.mkdir(parents=True, exist_ok=True)
-
     logger.info(f"Processing {len(game_logs)} games with {max_workers} workers")
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = []
+        futures = [
+            (
+                executor.submit(process_single_game, game_log, config, output_dir),
+                game_log,
+            )
+            for game_log in game_logs
+        ]
 
-        for game_log in game_logs:
-            future = executor.submit(process_single_game, game_log, config, output_dir)
-            futures.append((future, game_log.game_id))
-
-        # 結果を収集
-        completed = 0
-        failed = 0
-
-        for future, game_id in futures:
-            try:
-                result = future.result()
-                if result:
-                    completed += 1
-                    logger.info(f"Completed processing: {game_id}")
-                else:
-                    failed += 1
-                    logger.error(f"Failed processing: {game_id}")
-            except Exception as e:
-                failed += 1
-                logger.error(f"Error processing {game_id}: {e}")
+        completed, failed = _collect_processing_results(futures)
 
     logger.info(f"Batch processing completed. Success: {completed}, Failed: {failed}")
 
