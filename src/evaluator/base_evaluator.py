@@ -12,7 +12,7 @@ from src.models.evaluation import (
 class BaseEvaluator(ABC):
     """評価器の基底クラス."""
 
-    def __init__(self, config: EvaluationConfig):
+    def __init__(self, config: EvaluationConfig) -> None:
         """評価器を初期化.
 
         Args:

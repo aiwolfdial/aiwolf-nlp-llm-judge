@@ -18,6 +18,7 @@ from src.evaluator.game_detector import GameDetector
 from src.llm.evaluator import Evaluator
 from src.llm.formatter import GameLogFormatter
 from src.models.evaluation.config import EvaluationConfig
+from src.models.evaluation.criteria import EvaluationCriteria
 from src.models.evaluation.llm_response import EvaluationLLMResponse
 from src.models.evaluation.result import EvaluationResult
 from src.models.game import GameFormat, GameInfo
@@ -91,8 +92,8 @@ class GameProcessor:
             return False
         except Exception as e:
             logger.error(
-                f"Unexpected error processing game {game_log.game_id}: {e}", 
-                exc_info=True
+                f"Unexpected error processing game {game_log.game_id}: {e}",
+                exc_info=True,
             )
             return False
 
@@ -173,7 +174,9 @@ class GameProcessor:
 
     @staticmethod
     def _evaluate_criterion(
-        criteria, formatted_data: list[dict[str, Any]], evaluator: Evaluator
+        criteria: EvaluationCriteria,
+        formatted_data: list[dict[str, Any]],
+        evaluator: Evaluator,
     ) -> tuple[str, EvaluationLLMResponse]:
         """単一評価基準の評価を実行"""
         logger.debug(f"Evaluating: {criteria.name}")
@@ -212,14 +215,16 @@ class GameProcessor:
         # プレイヤー名からチーム名へのマッピングを取得
         json_reader = game_log.get_json_reader()
         player_to_team = json_reader.get_agent_to_team_mapping()
-        
+
         # デバッグ用ログ
         logger.debug(f"Player to team mapping: {player_to_team}")
         if evaluation_result.get_all_criteria_names():
             sample_criteria = evaluation_result.get_all_criteria_names()[0]
             sample_response = evaluation_result.get_by_criteria(sample_criteria)
             if sample_response.rankings:
-                logger.debug(f"Sample player names from LLM: {[elem.player_name for elem in sample_response.rankings[:3]]}")
+                logger.debug(
+                    f"Sample player names from LLM: {[elem.player_name for elem in sample_response.rankings[:3]]}"
+                )
 
         result_data = {
             "game_id": game_log.game_id,
@@ -341,8 +346,12 @@ class BatchProcessor:
             try:
                 game_format = GameFormat(game_format_str)
             except ValueError as e:
-                logger.error(f"Invalid game format: '{game_format_str}'. Valid values are: {[fmt.value for fmt in GameFormat]}")
-                raise ValueError(f"Invalid game format '{game_format_str}' in configuration") from e
+                logger.error(
+                    f"Invalid game format: '{game_format_str}'. Valid values are: {[fmt.value for fmt in GameFormat]}"
+                )
+                raise ValueError(
+                    f"Invalid game format '{game_format_str}' in configuration"
+                ) from e
 
             return ProcessingConfig(
                 input_dir=input_dir,

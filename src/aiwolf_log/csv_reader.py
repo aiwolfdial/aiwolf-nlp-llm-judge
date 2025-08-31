@@ -1,11 +1,13 @@
 import csv
+import types
 from pathlib import Path
+from typing import Any
 
 
 class AIWolfCSVReader:
     """AIWolf CSVファイルを読み込むクラス."""
 
-    def __init__(self, config: dict, file_path: Path):
+    def __init__(self, config: dict[str, Any], file_path: Path) -> None:
         if not file_path.is_file():
             msg = f"File not found: {file_path}"
             raise ValueError(msg)
@@ -15,7 +17,7 @@ class AIWolfCSVReader:
         self._file = None
         self._reader = None
 
-    def open(self):
+    def open(self) -> None:
         """ファイルを開いてCSVリーダーを初期化."""
         self._file = open(self.file_path, encoding=self.encoding)
         self._reader = csv.reader(self._file)
@@ -32,18 +34,23 @@ class AIWolfCSVReader:
         except StopIteration:
             return None
 
-    def close(self):
+    def close(self) -> None:
         """ファイルを閉じる."""
         if self._file:
             self._file.close()
             self._file = None
             self._reader = None
 
-    def __enter__(self):
+    def __enter__(self) -> "AIWolfCSVReader":
         """with文のサポート."""
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
         """with文のサポート."""
         self.close()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -10,6 +11,8 @@ from src.models.game import GameFormat
 
 if TYPE_CHECKING:
     from src.aiwolf_log.game_log import AIWolfGameLog
+
+logger = logging.getLogger(__name__)
 
 
 class GameLogFormatter:

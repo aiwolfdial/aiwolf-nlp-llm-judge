@@ -160,10 +160,11 @@ class ConfigLoader:
             try:
                 # より柔軟なパース（例: "13_player", "13-player", "13"）
                 import re
+
                 match = re.search(r"(\d+)", player_count_str)
                 if not match:
                     raise ValueError(f"No player count found in: {player_count_str}")
-                
+
                 player_count = int(match.group(1))
                 for criteria_dict in criteria_list:
                     criteria = ConfigLoader._load_criteria_dict(
@@ -171,7 +172,9 @@ class ConfigLoader:
                     )
                     all_criteria.append(criteria)
             except (ValueError, AttributeError) as e:
-                raise ValueError(f"Invalid player count format '{player_count_str}': {e}")
+                raise ValueError(
+                    f"Invalid player count format '{player_count_str}': {e}"
+                )
 
         return EvaluationConfig(all_criteria)
 

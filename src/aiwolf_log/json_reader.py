@@ -125,63 +125,63 @@ class AIWolfJSONReader:
             entries配列のデータ
         """
         return self.data.get("entries", [])
-    
+
     def get_agent_to_team_mapping(self) -> dict[str, str]:
         """エージェント表示名からチーム名へのマッピングを作成
-        
+
         エージェント表示名（Minako, Yumi など）から、実際のチーム名を取得する
         各エージェントのINITIALIZE requestから名前とindexを取得し、
         agents配列でindexに対応するチーム情報を特定する
-        
+
         Returns:
             エージェント名をキー、チーム名を値とする辞書
         """
         agent_to_team = {}
         entries = self.data.get("entries", [])
         agents_data = self.data.get("agents", [])
-        
+
         # agents配列から idx -> team のマッピングを作成
         idx_to_team = {agent["idx"]: agent["team"] for agent in agents_data}
-        
+
         # 各エージェントのINITIALIZE requestを処理
         processed_agents = set()
-        
+
         for entry in entries:
             try:
                 request_str = entry.get("request", "")
                 if not request_str:
                     continue
-                    
+
                 request_data = json.loads(request_str)
-                
+
                 if request_data.get("request") == Request.INITIALIZE.value:
                     info = request_data.get("info", {})
                     agent_name = info.get("agent")
-                    
+
                     # 既に処理済みのエージェントは スキップ
                     if not agent_name or agent_name in processed_agents:
                         continue
-                        
+
                     processed_agents.add(agent_name)
-                    
+
                     # agentフィールドはINITIALIZE requestの中のagent値を使用
                     # このagentは表示名（Minako, Yumiなど）
-                    
+
                     # entries配列での順番やagent値から、対応するagents配列のindexを特定
                     # 暫定的な実装：entry順序をベースに対応付け
-                    
+
                     # より確実にするため、ファイル名やその他の情報から推測
                     # ここでは単純な方法として、agents配列からteam情報を使用
-                    
+
                     # INITIALIZE requestのagent値に基づき、対応するチーム名を設定
                     # ここで使用する方法は、エントリーの順序や他の手がかりを使用
-                    
+
                     # 暫定実装：エントリーの順序で判断（完璧ではないが、実用的）
                     agent_idx = len(agent_to_team) + 1  # 1から開始する通し番号
                     if agent_idx in idx_to_team:
                         agent_to_team[agent_name] = idx_to_team[agent_idx]
-                    
+
             except (json.JSONDecodeError, KeyError, TypeError):
                 continue
-        
+
         return agent_to_team
