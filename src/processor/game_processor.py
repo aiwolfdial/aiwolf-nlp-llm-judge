@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from src.aiwolf_log.game_log import AIWolfGameLog
-from src.evaluator.config_loader import ConfigLoader
+from src.evaluator.loaders.criteria_loader import CriteriaLoader
+from src.evaluator.loaders.settings_loader import SettingsLoader
 from src.evaluator.game_detector import GameDetector
 from src.llm.evaluator import Evaluator
 from src.llm.formatter import GameLogFormatter
@@ -115,7 +116,10 @@ class GameProcessor:
             ConfigurationError: 設定読み込みに失敗した場合
         """
         try:
-            config = ConfigLoader.load_from_settings(self.settings_path)
+            criteria_path = SettingsLoader.get_evaluation_criteria_path(
+                self.settings_path
+            )
+            config = CriteriaLoader.load_evaluation_config(criteria_path)
             logger.debug(f"Loaded {len(config)} evaluation criteria")
             return config
         except Exception as e:

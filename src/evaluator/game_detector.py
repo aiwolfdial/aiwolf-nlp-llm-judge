@@ -3,7 +3,7 @@ from pathlib import Path
 
 from src.aiwolf_log.parser import AIWolfCSVParser
 from src.models.game import GameInfo
-from src.evaluator.config_loader import ConfigLoader
+from src.evaluator.loaders.settings_loader import SettingsLoader
 
 
 class GameDetector:
@@ -28,8 +28,8 @@ class GameDetector:
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
         # 設定ファイルからプレイヤー数とゲーム形式を読み込み
-        player_count = ConfigLoader.load_player_count(settings_path)
-        game_format = ConfigLoader.load_game_format(settings_path)
+        player_count = SettingsLoader.load_player_count(settings_path)
+        game_format = SettingsLoader.load_game_format(settings_path)
 
         return GameInfo(
             game_format=game_format,

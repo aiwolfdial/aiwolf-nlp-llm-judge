@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import yaml
 
-from src.processor import BatchProcessor
+from src.processor.batch_processor import BatchProcessor
 
 
 def setup_logging() -> None:

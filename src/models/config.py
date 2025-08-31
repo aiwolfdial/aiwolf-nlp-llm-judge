@@ -76,22 +76,3 @@ class AppConfig:
             game=game_config,
             processing=processing_config,
         )
-
-    def to_dict(self) -> dict:
-        """辞書形式に変換."""
-        return {
-            "path": {
-                "env": str(self.path.env),
-                "evaluation_criteria": str(self.path.evaluation_criteria),
-            },
-            "llm": {"prompt_yml": str(self.llm.prompt_yml), "model": self.llm.model},
-            "game": {
-                "format": self.game.format,
-                "player_count": self.game.player_count,
-            },
-            "processing": {
-                "input_dir": str(self.processing.input_dir),
-                "output_dir": str(self.processing.output_dir),
-                "max_workers": self.processing.max_workers,
-            },
-        }
