@@ -2,6 +2,5 @@
 
 from .criteria_loader import CriteriaLoader
 from .settings_loader import SettingsLoader
-from .yaml_loader import YAMLLoader
 
-__all__ = ["YAMLLoader", "SettingsLoader", "CriteriaLoader"]
+__all__ = ["SettingsLoader", "CriteriaLoader"]

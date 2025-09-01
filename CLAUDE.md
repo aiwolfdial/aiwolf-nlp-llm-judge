@@ -12,11 +12,11 @@ AIWolf CSVファイルを生成AIで評価するシステム（**プロダクシ
 
 ### 設計思想
 - **型安全Python**: 広範囲な型ヒント、データクラス、Enumの使用
-- **モジュラー設計**: 関心の分離による明確なアーキテクチャ  
+- **ドメイン駆動設計**: game/evaluationドメインに基づく明確な境界分離
 - **並列処理**: マルチレベル並列化（プロセス・スレッドベース）
 - **設定駆動**: 柔軟なYAMLベース設定システム
 - **LLM統合**: OpenAI GPT-4oとの構造化出力検証
-- **保守性重視**: ファイル分離による可読性と拡張性の向上
+- **保守性重視**: 責任別ファイル分離による認知負荷軽減
 
 ## ファイル構成
 
@@ -36,11 +36,27 @@ aiwolf-nlp-llm-judge/
 │   │   ├── log/                   # ゲームログファイル（*.log）
 │   │   └── json/                  # キャラクター情報ファイル（*.json）
 │   └── output/                    # 結果出力（チームマッピング付きJSON）
-└── src/                          # ソースコードモジュール
+└── src/                          # ソースコードモジュール（ドメイン駆動設計）
     ├── __init__.py               # Pythonパッケージ化
     ├── cli.py                    # argparseベースCLIインターフェース
-    ├── processor.py              # バッチ処理システム（後方互換性用）
-    ├── processor/                # バッチ処理システム（モジュール分離版）
+    ├── game/                     # ゲームドメイン
+    │   ├── __init__.py           # パブリックAPI露出
+    │   ├── models.py             # GameFormat, GameInfo, PlayerInfo, CharacterInfo
+    │   └── detector.py           # ゲーム形式検出
+    ├── evaluation/               # 評価ドメイン
+    │   ├── __init__.py           # パブリックAPI露出
+    │   ├── base_evaluator.py     # 基底評価器（プレースホルダー）
+    │   ├── models/               # 評価データモデル
+    │   │   ├── __init__.py       # パブリックAPI露出
+    │   │   ├── criteria.py       # ランキングタイプ、カテゴリ、評価基準
+    │   │   ├── llm_response.py   # LLMレスポンス用Pydanticモデル
+    │   │   ├── result.py         # EvaluationResultコンテナ
+    │   │   └── config.py         # EvaluationConfigコンテナ
+    │   └── loaders/              # 評価設定ローダー
+    │       ├── __init__.py       # パブリックAPI露出
+    │       ├── settings_loader.py # settings.yaml専用ローダー
+    │       └── criteria_loader.py # evaluation_criteria.yaml専用ローダー
+    ├── processor/                # バッチ処理システム
     │   ├── __init__.py           # パブリックAPI露出
     │   ├── batch_processor.py    # マルチゲーム並列処理
     │   ├── game_processor.py     # 単一ゲーム処理
@@ -53,38 +69,19 @@ aiwolf-nlp-llm-judge/
     │   ├── json_reader.py        # チームマッピング機能付きJSONリーダー
     │   ├── parser.py             # アクション固有CSVパース
     │   └── game_log.py           # ログ・JSONペア管理
-    ├── evaluator/                # 評価設定
-    │   ├── __init__.py
-    │   ├── config_loader.py      # YAML設定パースと検証（後方互換性用）
-    │   ├── game_detector.py      # 設定からのゲーム形式検出
-    │   ├── base_evaluator.py     # 基底評価器（プレースホルダー）
-    │   └── loaders/              # 設定ローダーモジュール
-    │       ├── __init__.py       # パブリックAPI露出
-    │       ├── yaml_loader.py    # YAML読み込み基本機能
-    │       ├── settings_loader.py # settings.yaml専用ローダー
-    │       └── criteria_loader.py # evaluation_criteria.yaml専用ローダー
     ├── llm/                      # LLM統合
     │   ├── __init__.py
     │   ├── evaluator.py          # OpenAI APIとPydantic検証の統合
     │   └── formatter.py          # ゲームログ→JSONL変換
-    ├── models/                   # データモデル
-    │   ├── __init__.py
-    │   ├── config.py             # アプリケーション設定データクラス
-    │   ├── game.py               # ゲーム形式、プレイヤー情報、キャラクター情報
-    │   └── evaluation/           # 評価固有モデル
-    │       ├── __init__.py
-    │       ├── criteria.py       # ランキングタイプ、カテゴリ、評価基準
-    │       ├── llm_response.py   # LLMレスポンス用Pydanticモデル
-    │       ├── result.py         # EvaluationResultコンテナ
-    │       └── config.py         # EvaluationConfigコンテナ
-    └── utils/                    # ユーティリティ
+    └── utils/                    # 汎用ユーティリティ
         ├── __init__.py
+        ├── yaml_loader.py        # YAML読み込み基本機能
         └── game_log_finder.py    # ゲームログ発見
 ```
 
-## データモデルアーキテクチャ
+## データモデルアーキテクチャ（ドメイン駆動設計）
 
-### ゲームモデル（`models/game.py`）
+### ゲームモデル（`game/models.py`）
 ```python
 class GameFormat(Enum):
     SELF_MATCH = "self_match"      # 自己対戦
@@ -108,7 +105,7 @@ class CharacterInfo:               # キャラクタープロフィール
     profile: str
 ```
 
-### 評価モデル（`models/evaluation/`）
+### 評価モデル（`evaluation/models/`）
 ```python
 class RankingType(Enum):
     ORDINAL = "ordinal"            # 順序付け（1位、2位...）
@@ -127,7 +124,7 @@ class EvaluationCriteria:
     category: CriteriaCategory     # 評価基準のカテゴリー
 ```
 
-### LLM統合（`models/evaluation/llm_response.py`）
+### LLM統合（`evaluation/models/llm_response.py`）
 ```python
 class EvaluationElement(BaseModel):  # Pydantic検証
     player_name: str = Field(description="評価対象者の名前")
@@ -178,7 +175,6 @@ class AppProcessingConfig:
 - `processor/game_processor.py` - 単一ゲーム処理
 - `processor/batch_processor.py` - マルチゲーム並列処理
 - `processor/__init__.py` - パブリックAPI露出
-- `processor.py` - 後方互換性維持
 
 #### 中核クラス:
 ```python
@@ -260,26 +256,25 @@ class AIWolfGameLog:
 - **JSONReader**: キャラクター情報抽出、チームマッピング
 - **Parser**: アクション固有CSVパース（talk, vote, divine等）
 
-### 3.5. 設定ローダーシステム（`evaluator/loaders/`モジュール）
+### 3.5. 設定ローダーシステム（`evaluation/loaders/`モジュール）
 
-#### アーキテクチャ改善（2025-08-31）:
-元の223行の設定ローダーファイルを、責任に応じて3つのファイルに分離：
+#### アーキテクチャ改善（2025-09-01）:
+設定ローダーシステムを評価ドメインに移動し、YAMLLoaderを汎用ユーティリティに分離：
 
-- `evaluator/loaders/yaml_loader.py` - YAML読み込み基本機能
-- `evaluator/loaders/settings_loader.py` - settings.yaml専用ローダー
-- `evaluator/loaders/criteria_loader.py` - evaluation_criteria.yaml専用ローダー
-- `evaluator/loaders/__init__.py` - パブリックAPI露出
-- `evaluator/config_loader.py` - 後方互換性維持
+- `evaluation/loaders/settings_loader.py` - settings.yaml専用ローダー
+- `evaluation/loaders/criteria_loader.py` - evaluation_criteria.yaml専用ローダー
+- `evaluation/loaders/__init__.py` - パブリックAPI露出
+- `utils/yaml_loader.py` - YAML読み込み基本機能（汎用）
 
 #### 分離されたローダー:
 ```python
-# src/evaluator/loaders/yaml_loader.py
+# src/utils/yaml_loader.py
 class YAMLLoader:
     @staticmethod
     def load_yaml(file_path: Path) -> Dict[str, Any]:
         """YAMLファイルの基本読み込み機能"""
 
-# src/evaluator/loaders/settings_loader.py  
+# src/evaluation/loaders/settings_loader.py  
 class SettingsLoader:
     @staticmethod
     def load_player_count(settings_path: Path) -> int:
@@ -293,7 +288,7 @@ class SettingsLoader:
     def get_evaluation_criteria_path(settings_path: Path) -> Path:
         """settings.yamlから評価基準ファイルのパスを取得"""
 
-# src/evaluator/loaders/criteria_loader.py
+# src/evaluation/loaders/criteria_loader.py
 class CriteriaLoader:
     @staticmethod
     def load_evaluation_config(config_path: Path) -> EvaluationConfig:
@@ -472,6 +467,51 @@ data/
   }
 }
 ```
+
+## アーキテクチャ進化：ドメイン駆動設計への移行（2025-09-01）
+
+### 移行の動機
+元のレイヤー別構造（`models/`, `evaluator/`）からドメイン駆動設計（`game/`, `evaluation/`）への移行を実施。
+
+#### 移行前の構造の課題
+- **認知的負荷**: 関連する機能が異なるディレクトリに分散
+- **責任の曖昧さ**: GameDetectorが`evaluator/`に配置されていた不適切さ
+- **依存関係の複雑化**: 横断的なimportパスによる結合度の高さ
+
+#### 移行後の構造の利点
+- **ドメイン境界の明確化**: game（ゲーム情報管理）とevaluation（評価処理）の明確な分離
+- **高凝集・低結合**: 関連する機能が同一ドメイン内に集約
+- **拡張性向上**: 新機能追加時の影響範囲が限定的
+
+### 具体的な移行内容
+
+#### 1. ゲームドメインの統合
+```
+src/models/game.py → src/game/models.py
+src/evaluator/game_detector.py → src/game/detector.py
+```
+
+#### 2. 評価ドメインの統合
+```
+src/models/evaluation/ → src/evaluation/models/
+src/evaluator/base_evaluator.py → src/evaluation/base_evaluator.py
+src/evaluator/loaders/ → src/evaluation/loaders/
+```
+
+#### 3. 汎用ユーティリティの分離
+```
+src/evaluator/loaders/yaml_loader.py → src/utils/yaml_loader.py
+```
+
+#### 4. 不要な構造の削除
+- `src/models/`ディレクトリの完全削除
+- `src/evaluator/`ディレクトリの完全削除
+- 後方互換性ファイルの削除
+
+### 設計原則の適用
+- **単一責任原則**: 各ドメインが明確な責任を持つ
+- **依存性逆転**: ドメイン間の疎結合を実現
+- **開放閉鎖原則**: 新機能追加に開放、既存コードの変更に閉鎖
 
 ## 技術実装詳細
 
@@ -653,33 +693,33 @@ data/
 - **型安全性**: ~95%（型ヒント改善とモジュール分離により大幅向上）
 - **エラーハンドリング**: ~85%（具体的例外処理実装と階層化）
 - **コード品質**: ~90%（モジュール分離による保守性向上）
-- **アーキテクチャ**: 90%（関心の分離と単一責任原則の適用）
+- **アーキテクチャ**: 95%（ドメイン駆動設計による明確な境界分離）
 - **ドキュメント**: 95%（本ドキュメント更新完了）
 - **セキュリティ**: 70%（基本的セキュリティ対策実装済み）
 
-### ファイル構造改善:
-- **分離前**: 2つの大きなファイル（861行）
-- **分離後**: 8つの焦点を絞ったファイル（平均100行）+ 後方互換性ファイル
-- **責任分離**: 単一責任原則に基づく明確な境界
-- **保守性向上**: ファイル分離による認知負荷軽減
+### アーキテクチャ進化:
+- **ドメイン駆動設計**: レイヤー別からドメイン別構造への移行完了
+- **責任境界の明確化**: game/evaluation ドメインの明確な分離
+- **保守性向上**: ドメイン内での高凝集・ドメイン間での低結合実現
+- **拡張性向上**: 新機能追加時の影響範囲限定
 
 ## 結論
 
 AIWolf NLP LLM Judgeプロジェクトは**機能的成熟度**と**アーキテクチャ品質**を達成し、プロダクション対応可能な堅牢なシステムを実現しています。システムは以下を実証しています：
 
 - **型安全Python開発**: 包括的データモデルによる開発
+- **ドメイン駆動設計**: game/evaluationドメインの明確な境界分離
 - **スケーラブル並列処理**: マルチレベル最適化
 - **柔軟な設定管理**: 様々なゲーム形式への対応
 - **プロフェッショナルLLM統合**: 構造化検証付き
 - **包括的エラーハンドリング**: 階層化された例外システム
-- **クリーンなアーキテクチャ**: 関心の分離と単一責任原則
-- **保守性重視**: モジュール分離による認知負荷軽減
-- **拡張性**: 責任分離による将来機能追加への対応
+- **高凝集・低結合**: ドメイン内の機能統合とドメイン間の疎結合
+- **拡張性**: ドメイン境界による影響範囲の限定
 
 ### アーキテクチャの成熟度:
-- **861行の巨大ファイル** → **8つの焦点を絞ったモジュール**への分離
-- **後方互換性**を保持しながらの段階的改善
-- **単一責任原則**に基づく明確な境界設定
-- **テスト容易性**の大幅向上
+- **レイヤー別構造**から**ドメイン駆動設計**への進化完了
+- **認知負荷軽減**: 関連機能のドメイン内統合
+- **責任境界の明確化**: 単一責任原則に基づく設計
+- **将来拡張性**: 新ドメイン追加時の既存コードへの影響最小化
 
 このコードベースは、最先端の言語モデルを使用したAIWolfゲームログの自動評価のための、**よく設計され、保守性の高い**ソリューションを表しており、将来の機能拡張への明確で安全な道筋を提供しています。

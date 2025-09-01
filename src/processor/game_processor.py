@@ -7,16 +7,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from src.aiwolf_log.game_log import AIWolfGameLog
-from src.evaluator.loaders.criteria_loader import CriteriaLoader
-from src.evaluator.loaders.settings_loader import SettingsLoader
-from src.evaluator.game_detector import GameDetector
+from src.evaluation.loaders.criteria_loader import CriteriaLoader
+from src.evaluation.loaders.settings_loader import SettingsLoader
+from src.game.detector import GameDetector
 from src.llm.evaluator import Evaluator
 from src.llm.formatter import GameLogFormatter
-from src.models.evaluation.config import EvaluationConfig
-from src.models.evaluation.criteria import EvaluationCriteria
-from src.models.evaluation.llm_response import EvaluationLLMResponse
-from src.models.evaluation.result import EvaluationResult
-from src.models.game import GameInfo
+from src.evaluation.models.config import EvaluationConfig
+from src.evaluation.models.criteria import EvaluationCriteria
+from src.evaluation.models.llm_response import EvaluationLLMResponse
+from src.evaluation.models.result import EvaluationResult
+from src.game.models import GameInfo
 
 from .errors import (
     ConfigurationError,

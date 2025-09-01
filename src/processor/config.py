@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
 
-from src.models.game import GameFormat
+from src.game.models import GameFormat
 from .errors import ConfigurationError
 
 

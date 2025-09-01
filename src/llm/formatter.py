@@ -7,7 +7,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from src.aiwolf_log.parser import AIWolfCSVParser
-from src.models.game import GameFormat
+from src.game.models import GameFormat
 
 if TYPE_CHECKING:
     from src.aiwolf_log.game_log import AIWolfGameLog

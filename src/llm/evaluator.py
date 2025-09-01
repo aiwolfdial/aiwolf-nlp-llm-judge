@@ -12,7 +12,7 @@ from openai.types.chat import (
 )
 from pydantic import BaseModel
 
-from src.models.evaluation import EvaluationCriteria
+from src.evaluation.models import EvaluationCriteria
 
 import yaml
 

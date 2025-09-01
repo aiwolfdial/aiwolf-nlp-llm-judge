@@ -4,13 +4,13 @@ import re
 from pathlib import Path
 from typing import List
 
-from src.models.evaluation import (
+from src.evaluation.models import (
     EvaluationConfig,
     EvaluationCriteria,
     RankingType,
     CriteriaCategory,
 )
-from .yaml_loader import YAMLLoader
+from src.utils.yaml_loader import YAMLLoader
 
 
 class CriteriaLoader:

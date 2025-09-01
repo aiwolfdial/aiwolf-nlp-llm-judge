@@ -1,4 +1,4 @@
-from src.models.evaluation.criteria import EvaluationCriteria
+from src.evaluation.models.criteria import EvaluationCriteria
 
 
 class EvaluationConfig(list[EvaluationCriteria]):

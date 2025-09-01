@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from src.models.game import GameFormat
-from .yaml_loader import YAMLLoader
+from src.game.models import GameFormat
+from src.utils.yaml_loader import YAMLLoader
 
 
 class SettingsLoader:

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Self
 
 from aiwolf_nlp_common.packet import Request
-from src.models.game import PlayerInfo
+from src.game.models import PlayerInfo
 
 
 class AIWolfJSONReader:
