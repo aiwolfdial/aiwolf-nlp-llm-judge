@@ -5,7 +5,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List
 
-from src.aiwolf_log.game_log import AIWolfGameLog
+from src.aiwolf_log import AIWolfGameLog
 from src.utils.game_log_finder import find_all_game_logs
 
 from .config import ProcessingConfig

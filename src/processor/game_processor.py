@@ -40,7 +40,6 @@ class GameProcessor:
     """
 
     # クラス定数
-    MAX_EVALUATION_THREADS = 8
     DEFAULT_SETTINGS_PATH = "config/settings.yaml"
     SUCCESS_INDICATOR = "✓"
     FAILURE_INDICATOR = "✗"
@@ -61,6 +60,9 @@ class GameProcessor:
 
         if not self.settings_path.exists():
             raise ConfigurationError(f"Settings file not found: {self.settings_path}")
+
+        # 設定から評価用スレッド数を読み込み（デフォルト8）
+        self.max_evaluation_threads = self._load_evaluation_workers()
 
     def process(self, game_log: AIWolfGameLog, output_dir: Path) -> bool:
         """ゲームログを処理して評価結果を出力
@@ -124,6 +126,37 @@ class GameProcessor:
             return config
         except Exception as e:
             raise ConfigurationError(f"Failed to load evaluation config: {e}") from e
+
+    def _load_evaluation_workers(self) -> int:
+        """設定から評価用スレッド数を読み込み
+
+        Returns:
+            評価用スレッド数（デフォルト: 8）
+
+        Raises:
+            ConfigurationError: 設定読み込みに失敗した場合
+        """
+        try:
+            from src.utils.yaml_loader import YAMLLoader
+
+            config_data = YAMLLoader.load_yaml(self.settings_path)
+            evaluation_workers = config_data.get("processing", {}).get(
+                "evaluation_workers", 8
+            )
+
+            # 値の妥当性チェック
+            if not isinstance(evaluation_workers, int) or evaluation_workers < 1:
+                logger.warning(
+                    f"Invalid evaluation_workers value: {evaluation_workers}, using default: 8"
+                )
+                return 8
+
+            logger.debug(f"Loaded evaluation_workers: {evaluation_workers}")
+            return evaluation_workers
+
+        except Exception as e:
+            logger.warning(f"Failed to load evaluation_workers: {e}, using default: 8")
+            return 8
 
     def _detect_game_info(self, game_log: AIWolfGameLog) -> GameInfo:
         """ゲーム情報を検出
@@ -240,7 +273,7 @@ class GameProcessor:
             evaluation_result = EvaluationResult()
 
             # ThreadPoolExecutorを使用した並列評価
-            max_workers = min(len(criteria_for_game), self.MAX_EVALUATION_THREADS)
+            max_workers = min(len(criteria_for_game), self.max_evaluation_threads)
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 # タスク投入

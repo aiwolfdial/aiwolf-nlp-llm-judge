@@ -11,11 +11,12 @@ from src.game.models import PlayerInfo
 class AIWolfJSONReader:
     """AIWolfのJSONファイルを読み込むクラス."""
 
-    def __init__(self, file_path: Path):
+    def __init__(self, file_path: Path, encoding: str = "utf-8"):
         """初期化
 
         Args:
             file_path: JSONファイルのパス
+            encoding: ファイルエンコーディング（デフォルト: utf-8）
 
         Raises:
             FileNotFoundError: ファイルが存在しない場合
@@ -24,6 +25,7 @@ class AIWolfJSONReader:
             raise FileNotFoundError(f"File not found: {file_path}")
 
         self.file_path = file_path
+        self.encoding = encoding
         self._data: dict[str, Any] | None = None
 
     @property
@@ -42,18 +44,19 @@ class AIWolfJSONReader:
         Raises:
             json.JSONDecodeError: JSONの解析に失敗した場合
         """
-        with open(self.file_path, "r", encoding="utf-8") as f:
+        with open(self.file_path, "r", encoding=self.encoding) as f:
             self._data = json.load(f)
         return self._data
 
     @classmethod
-    def from_log_path(cls, log_path: Path) -> Self:
+    def from_log_path(cls, log_path: Path, encoding: str = "utf-8") -> Self:
         """ログファイルパスから対応するJSONファイルのリーダーを作成
 
         hoge.logに対応するhoge.jsonを読み込む
 
         Args:
             log_path: ログファイルのパス
+            encoding: ファイルエンコーディング（デフォルト: utf-8）
 
         Returns:
             AIWolfJSONReaderインスタンス
@@ -62,7 +65,7 @@ class AIWolfJSONReader:
             FileNotFoundError: 対応するJSONファイルが存在しない場合
         """
         json_path = log_path.with_suffix(".json")
-        return cls(json_path)
+        return cls(json_path, encoding)
 
     def get_player_infos(self) -> list[PlayerInfo]:
         """agentsデータからPlayerInfoのリストを作成

@@ -18,8 +18,6 @@ game:
 processing:
   input_dir: "data/input"    # 入力ディレクトリ
   output_dir: "data/output"  # 出力ディレクトリ
-  file_pattern: "*.log"      # ファイルパターン
   encoding: "utf-8"          # ファイルエンコーディング
-  max_workers: 4             # プロセス並列処理数（ファイル間並列処理）
-  translation_workers: 8     # スレッド並列処理数（ファイル内翻訳並列処理）
-  buffer_threshold: 8192
+  max_workers: 4             # プロセス並列処理数（ゲーム間並列処理）
+  evaluation_workers: 8      # スレッド並列処理数（評価基準並列処理）

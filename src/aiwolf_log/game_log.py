@@ -65,43 +65,82 @@ class AIWolfGameLog:
         # 新しいインスタンスを毎回作成（コンテキストマネージャーで適切に管理するため）
         return AIWolfCSVReader(config, self.log_path)
 
-    def get_json_reader(self) -> AIWolfJSONReader:
+    def get_json_reader(self, config: dict[str, Any] | None = None) -> AIWolfJSONReader:
         """JSONリーダーを取得.
+
+        Args:
+            config: 設定辞書（エンコーディング情報を含む）
 
         Returns:
             AIWolfJSONReaderインスタンス
         """
         if self._json_reader is None:
-            self._json_reader = AIWolfJSONReader(self.json_path)
+            encoding = "utf-8"  # デフォルト値
+            if config and "processing" in config and "encoding" in config["processing"]:
+                encoding = config["processing"]["encoding"]
+            self._json_reader = AIWolfJSONReader(self.json_path, encoding)
         return self._json_reader
 
-    def read_json(self) -> dict[str, Any]:
+    def read_json(self, config: dict[str, Any] | None = None) -> dict[str, Any]:
         """JSONファイルを読み込む.
+
+        Args:
+            config: 設定辞書（エンコーディング情報を含む）
 
         Returns:
             JSONデータ
         """
-        reader = self.get_json_reader()
+        reader = self.get_json_reader(config)
         return reader.read()
 
-    def get_character_info(self) -> dict[str, Any]:
+    def get_character_info(
+        self, config: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """キャラクター情報を取得.
+
+        Args:
+            config: 設定辞書（エンコーディング情報を含む）
 
         Returns:
             キャラクター情報の辞書
         """
-        reader = self.get_json_reader()
+        reader = self.get_json_reader(config)
         return reader.get_character_info()
 
-    @property
-    def game_id(self) -> str:
-        """ゲームIDをJSONから取得."""
+    def get_agent_to_team_mapping(
+        self, config: dict[str, Any] | None = None
+    ) -> dict[str, str]:
+        """エージェント表示名からチーム名へのマッピングを取得.
+
+        Args:
+            config: 設定辞書（エンコーディング情報を含む）
+
+        Returns:
+            エージェント名をキー、チーム名を値とする辞書
+        """
+        reader = self.get_json_reader(config)
+        return reader.get_agent_to_team_mapping()
+
+    def get_game_id(self, config: dict[str, Any] | None = None) -> str:
+        """ゲームIDをJSONから取得.
+
+        Args:
+            config: 設定辞書（エンコーディング情報を含む）
+
+        Returns:
+            ゲームID
+        """
         if self._game_id is None:
-            json_reader = self.get_json_reader()
+            json_reader = self.get_json_reader(config)
             json_data = json_reader.read()
             # JSONからgame_idを取得（フォーマットに依存）
             self._game_id = json_data.get("game_id", self.log_path.stem)
         return self._game_id
+
+    @property
+    def game_id(self) -> str:
+        """ゲームIDを取得（デフォルトエンコーディングを使用）."""
+        return self.get_game_id()
 
     @classmethod
     def from_input_dir(cls, input_dir: Path, file_name: str) -> Self:
