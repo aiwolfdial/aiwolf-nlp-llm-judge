@@ -165,6 +165,17 @@ class BatchProcessor:
         logger.info("Generating team aggregation results")
 
         try:
+            # 評価設定を読み込んで、criteria_name -> description のマッピングを作成
+            from src.processor.pipeline import DataPreparationService
+
+            data_prep_service = DataPreparationService(self.config)
+            evaluation_config = data_prep_service.load_evaluation_config()
+
+            # criteria_name -> description のマッピングを作成
+            criteria_name_to_description = {
+                criteria.name: criteria.description for criteria in evaluation_config
+            }
+
             aggregator = TeamAggregator()
 
             # 各評価結果辞書をTeamAggregatorに変換して追加
@@ -178,14 +189,37 @@ class BatchProcessor:
             team_averages = aggregator.calculate_team_averages()
             team_counts = aggregator.get_team_count_by_criteria()
 
+            # criteria_name を description に変換
+            def convert_criteria_names_to_descriptions(
+                data: dict[str, dict[str, Any]],
+            ) -> dict[str, dict[str, Any]]:
+                """criteria_name を description に変換"""
+                converted = {}
+                for team, criteria_dict in data.items():
+                    converted[team] = {}
+                    for criteria_name, value in criteria_dict.items():
+                        description = criteria_name_to_description.get(
+                            criteria_name, criteria_name
+                        )
+                        converted[team][description] = value
+                return converted
+
+            # 変換された集計結果
+            team_averages_with_descriptions = convert_criteria_names_to_descriptions(
+                team_averages
+            )
+            team_counts_with_descriptions = convert_criteria_names_to_descriptions(
+                team_counts
+            )
+
             aggregation_data = {
-                "team_averages": team_averages,
-                "team_sample_counts": team_counts,
+                "team_averages": team_averages_with_descriptions,
+                "team_sample_counts": team_counts_with_descriptions,
                 "summary": {
                     "total_games_processed": len(evaluation_results),
-                    "teams_found": list(team_averages.keys()),
+                    "teams_found": list(team_averages_with_descriptions.keys()),
                     "criteria_evaluated": list(
-                        next(iter(team_averages.values()), {}).keys()
+                        next(iter(team_averages_with_descriptions.values()), {}).keys()
                     ),
                 },
             }
@@ -198,7 +232,9 @@ class BatchProcessor:
                 json.dump(aggregation_data, f, ensure_ascii=False, indent=2)
 
             logger.info(f"Team aggregation saved to: {aggregation_file}")
-            logger.info(f"Teams processed: {list(team_averages.keys())}")
+            logger.info(
+                f"Teams processed: {list(team_averages_with_descriptions.keys())}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to generate team aggregation: {e}", exc_info=True)
