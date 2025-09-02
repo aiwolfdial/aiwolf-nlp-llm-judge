@@ -93,11 +93,11 @@ class EvaluationExecutionService:
                     criteria = future_to_criteria[future]
                     try:
                         criteria_name, llm_response = future.result()
-                        # CriteriaEvaluationResultを作成して辞書に追加
+                        # CriteriaEvaluationResultを作成してリストに追加
                         criteria_result = CriteriaEvaluationResult.from_llm_response(
                             criteria_name, llm_response, agent_to_team_mapping
                         )
-                        evaluation_result[criteria_name] = criteria_result
+                        evaluation_result.append(criteria_result)
                         logger.debug(f"Completed evaluation: {criteria_name}")
                     except Exception as e:
                         error_msg = f"Evaluation failed for {criteria.name}: {e}"

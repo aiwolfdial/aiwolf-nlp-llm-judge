@@ -72,8 +72,8 @@ class ResultWritingService:
             "evaluations": {},
         }
 
-        for criteria_name, criteria_result in evaluation_result.items():
-            result_data["evaluations"][criteria_name] = {
+        for criteria_result in evaluation_result:
+            result_data["evaluations"][criteria_result.criteria_name] = {
                 "rankings": [
                     {
                         "player_name": elem.player_name,
@@ -95,9 +95,7 @@ class ResultWritingService:
         """
 
         if evaluation_result:
-            sample_criteria_name, sample_criteria_result = next(
-                iter(evaluation_result.items())
-            )
+            sample_criteria_result = evaluation_result[0]
             if sample_criteria_result:
                 sample_players = [
                     elem.player_name for elem in sample_criteria_result[:3]

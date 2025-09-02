@@ -75,7 +75,55 @@ class CriteriaEvaluationResult(list[EvaluationResultElement]):
         return cls(criteria_name=criteria_name, elements=result_elements)
 
 
-class EvaluationResult(dict[str, CriteriaEvaluationResult]):
-    """全評価基準の結果を管理するクラス（辞書を継承、純粋なコンテナ）."""
+class EvaluationResult(list[CriteriaEvaluationResult]):
+    """全評価基準の結果を管理するクラス（リストを継承）."""
 
-    pass
+    def append(self, criteria_result: CriteriaEvaluationResult) -> None:
+        """評価結果を追加（重複チェック付き）
+
+        Args:
+            criteria_result: 追加する評価結果
+
+        Raises:
+            ValueError: 同一のcriteria_nameが既に存在する場合
+        """
+        if self.get_result_by_criteria_name(criteria_result.criteria_name) is not None:
+            raise ValueError(
+                f"Criteria '{criteria_result.criteria_name}' already exists in EvaluationResult"
+            )
+        super().append(criteria_result)
+
+    def add_result(self, criteria_result: CriteriaEvaluationResult) -> None:
+        """評価結果を安全に追加（appendのエイリアス）
+
+        Args:
+            criteria_result: 追加する評価結果
+
+        Raises:
+            ValueError: 同一のcriteria_nameが既に存在する場合
+        """
+        self.append(criteria_result)
+
+    def get_result_by_criteria_name(
+        self, criteria_name: str
+    ) -> Optional[CriteriaEvaluationResult]:
+        """指定された評価基準名の結果を取得
+
+        Args:
+            criteria_name: 評価基準名
+
+        Returns:
+            該当する評価結果、見つからない場合はNone
+        """
+        for result in self:
+            if result.criteria_name == criteria_name:
+                return result
+        return None
+
+    def get_criteria_names(self) -> list[str]:
+        """全ての評価基準名を取得
+
+        Returns:
+            評価基準名のリスト
+        """
+        return [result.criteria_name for result in self]
