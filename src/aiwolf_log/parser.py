@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .csv_schema import CSVColumnIndices
+
 
 class AIWolfCSVParser:
     """AIWolf CSVファイルのパースを行うクラス."""
@@ -19,7 +21,7 @@ class AIWolfCSVParser:
             TypeError: lineがリストでないか、要素が文字列でない場合
             ValueError: lineが空の場合
         """
-        return self._get_element(line, index=1)
+        return self._get_element(line, CSVColumnIndices.ACTION)
 
     def get_day(self, line: list[str]) -> int:
         """日数を取得.
@@ -34,7 +36,7 @@ class AIWolfCSVParser:
             TypeError: lineがリストでないか、要素が文字列でない場合
             ValueError: lineが空の場合、または日数が整数に変換できない場合
         """
-        day_str = self._get_element(line=line, index=0)
+        day_str = self._get_element(line=line, index=CSVColumnIndices.DAY)
         try:
             return int(day_str)
         except ValueError as e:
@@ -132,59 +134,80 @@ class AIWolfCSVParser:
 
     def _parse_conversation_action(self, line: list[str]) -> dict[str, str]:
         """会話系アクション（talk/whisper）のデータを解析."""
+        conv = CSVColumnIndices.ConversationAction
         return {
-            "talk_number": self._get_element_safe(line, 2),
-            "talk_count": self._get_element_safe(line, 3),
-            "speaker_index": self._get_element_safe(line, 4),
-            "text": self._get_element_safe(line, 5),
+            "talk_number": self._get_element_safe(line, conv.TALK_NUMBER),
+            "talk_count": self._get_element_safe(line, conv.TALK_COUNT),
+            "speaker_index": self._get_element_safe(line, conv.SPEAKER_INDEX),
+            "text": self._get_element_safe(line, conv.TEXT),
         }
 
     def _parse_status_action(self, line: list[str]) -> dict[str, str]:
         """statusアクションのデータを解析."""
+        status = CSVColumnIndices.StatusAction
         return {
-            "player_index": self._get_element_safe(line, 2),
-            "role": self._get_element_safe(line, 3),
-            "alive_status": self._get_element_safe(line, 4),
-            "team_name": self._get_element_safe(line, 5),
-            "player_name": self._get_element_safe(line, 6),
+            "player_index": self._get_element_safe(line, status.PLAYER_INDEX),
+            "role": self._get_element_safe(line, status.ROLE),
+            "alive_status": self._get_element_safe(line, status.ALIVE_STATUS),
+            "team_name": self._get_element_safe(line, status.TEAM_NAME),
+            "player_name": self._get_element_safe(line, status.PLAYER_NAME),
         }
 
     def _parse_vote_action(self, line: list[str]) -> dict[str, str]:
         """voteアクションのデータを解析."""
+        vote = CSVColumnIndices.VoteAction
         return {
-            "voter_index": self._get_element_safe(line, 2),
-            "target_index": self._get_element_safe(line, 3),
+            "voter_index": self._get_element_safe(line, vote.VOTER_INDEX),
+            "target_index": self._get_element_safe(line, vote.TARGET_INDEX),
         }
 
     def _parse_divine_action(self, line: list[str]) -> dict[str, str]:
         """divineアクションのデータを解析."""
+        divine = CSVColumnIndices.DivineAction
         return {
-            "diviner_index": self._get_element_safe(line, 2),
-            "target_index": self._get_element_safe(line, 3),
-            "divine_result": self._get_element_safe(line, 4),
+            "diviner_index": self._get_element_safe(line, divine.DIVINER_INDEX),
+            "target_index": self._get_element_safe(line, divine.TARGET_INDEX),
+            "divine_result": self._get_element_safe(line, divine.DIVINE_RESULT),
         }
 
     def _parse_execute_action(self, line: list[str]) -> dict[str, str]:
         """executeアクションのデータを解析."""
+        execute = CSVColumnIndices.ExecuteAction
         return {
-            "executed_player_index": self._get_element_safe(line, 2),
-            "executed_player_role": self._get_element_safe(line, 3),
+            "executed_player_index": self._get_element_safe(
+                line, execute.EXECUTED_PLAYER_INDEX
+            ),
+            "executed_player_role": self._get_element_safe(
+                line, execute.EXECUTED_PLAYER_ROLE
+            ),
         }
 
     def _parse_guard_action(self, line: list[str]) -> dict[str, str]:
         """guardアクションのデータを解析."""
+        guard = CSVColumnIndices.GuardAction
         return {
-            "guard_player_index": self._get_element_safe(line, 2),
-            "target_player_index": self._get_element_safe(line, 3),
-            "target_player_role": self._get_element_safe(line, 4),
+            "guard_player_index": self._get_element_safe(
+                line, guard.GUARD_PLAYER_INDEX
+            ),
+            "target_player_index": self._get_element_safe(
+                line, guard.TARGET_PLAYER_INDEX
+            ),
+            "target_player_role": self._get_element_safe(
+                line, guard.TARGET_PLAYER_ROLE
+            ),
         }
 
     def _parse_result_action(self, line: list[str]) -> dict[str, str]:
         """resultアクションのデータを解析."""
+        result = CSVColumnIndices.ResultAction
         return {
-            "villager_survivors": self._get_element_safe(line, 2),
-            "werewolf_survivors": self._get_element_safe(line, 3),
-            "winning_team": self._get_element_safe(line, 4),
+            "villager_survivors": self._get_element_safe(
+                line, result.VILLAGER_SURVIVORS
+            ),
+            "werewolf_survivors": self._get_element_safe(
+                line, result.WEREWOLF_SURVIVORS
+            ),
+            "winning_team": self._get_element_safe(line, result.WINNING_TEAM),
         }
 
     def _get_element_safe(self, line: list[str], index: int) -> str:

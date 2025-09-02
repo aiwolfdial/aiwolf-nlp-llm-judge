@@ -42,6 +42,7 @@ class GameProcessor:
     # クラス定数
     SUCCESS_INDICATOR = "✓"
     FAILURE_INDICATOR = "✗"
+    DEFAULT_EVALUATION_WORKERS = 8  # デフォルト評価用スレッド数
 
     def __init__(self, config: dict[str, Any]) -> None:
         """GameProcessorを初期化
@@ -129,7 +130,7 @@ class GameProcessor:
         """設定から評価用スレッド数を読み込み
 
         Returns:
-            評価用スレッド数（デフォルト: 8）
+            評価用スレッド数（デフォルト: DEFAULT_EVALUATION_WORKERS）
 
         Raises:
             ConfigurationError: 設定読み込みに失敗した場合
@@ -139,22 +140,26 @@ class GameProcessor:
 
             config_data = YAMLLoader.load_yaml(self.settings_path)
             evaluation_workers = config_data.get("processing", {}).get(
-                "evaluation_workers", 8
+                "evaluation_workers", self.DEFAULT_EVALUATION_WORKERS
             )
 
             # 値の妥当性チェック
             if not isinstance(evaluation_workers, int) or evaluation_workers < 1:
                 logger.warning(
-                    f"Invalid evaluation_workers value: {evaluation_workers}, using default: 8"
+                    f"Invalid evaluation_workers value: {evaluation_workers}, "
+                    f"using default: {self.DEFAULT_EVALUATION_WORKERS}"
                 )
-                return 8
+                return self.DEFAULT_EVALUATION_WORKERS
 
             logger.debug(f"Loaded evaluation_workers: {evaluation_workers}")
             return evaluation_workers
 
         except Exception as e:
-            logger.warning(f"Failed to load evaluation_workers: {e}, using default: 8")
-            return 8
+            logger.warning(
+                f"Failed to load evaluation_workers: {e}, "
+                f"using default: {self.DEFAULT_EVALUATION_WORKERS}"
+            )
+            return self.DEFAULT_EVALUATION_WORKERS
 
     def _detect_game_info(self, game_log: AIWolfGameLog) -> GameInfo:
         """ゲーム情報を検出
