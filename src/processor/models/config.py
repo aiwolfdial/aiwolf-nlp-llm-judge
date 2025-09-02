@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from src.game.models import GameFormat
-from .errors import ConfigurationError
+from .exceptions import ConfigurationError
 
 
 @dataclass(frozen=True)

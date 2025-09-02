@@ -1,19 +1,21 @@
-"""AIWolf ゲームログのバッチ処理システム
+"""AIWolf ゲームログのバッチ処理システム（モジュラー・モノリス構造）
 
 このモジュールは、AIWolfのゲームログを並列処理で評価するためのシステムを提供します。
 プロセス間並列処理とスレッド並列処理を組み合わせて効率的な処理を実現します。
+
+モジュラー・モノリス構造により、責任別にサービスが分離され、保守性が向上しています。
 """
 
 from .batch_processor import BatchProcessor
-from .config import ProcessingConfig
-from .errors import (
+from .game_processor import GameProcessor
+from .models import (
     ConfigurationError,
     EvaluationExecutionError,
     GameLogProcessingError,
+    ProcessingConfig,
     ProcessingError,
+    ProcessingResult,
 )
-from .game_processor import GameProcessor
-from .result import ProcessingResult
 
 __all__ = [
     "BatchProcessor",

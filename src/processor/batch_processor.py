@@ -8,9 +8,8 @@ from typing import Any
 from src.aiwolf_log import AIWolfGameLog
 from src.utils.game_log_finder import find_all_game_logs
 
-from .config import ProcessingConfig
 from .game_processor import GameProcessor
-from .result import ProcessingResult
+from .models import ProcessingConfig, ProcessingResult
 
 logger = logging.getLogger(__name__)
 
