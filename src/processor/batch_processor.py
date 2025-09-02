@@ -1,5 +1,6 @@
 """バッチ処理を管理するクラス."""
 
+import csv
 import json
 import logging
 from concurrent.futures import ProcessPoolExecutor
@@ -252,7 +253,7 @@ class BatchProcessor:
                 },
             }
 
-            # 集計結果をファイル保存
+            # 集計結果をJSONファイル保存
             aggregation_file = (
                 self.processing_config.output_dir / "team_aggregation.json"
             )
@@ -260,6 +261,11 @@ class BatchProcessor:
                 json.dump(aggregation_data, f, ensure_ascii=False, indent=2)
 
             logger.info(f"Team aggregation saved to: {aggregation_file}")
+
+            # 集計結果をCSVファイル保存
+            csv_file = self.processing_config.output_dir / "team_aggregation.csv"
+            self._save_team_aggregation_as_csv(aggregation_data, csv_file)
+            logger.info(f"Team aggregation CSV saved to: {csv_file}")
             logger.info(
                 f"Teams processed: {list(team_averages_with_descriptions.keys())}"
             )
@@ -303,3 +309,49 @@ class BatchProcessor:
             evaluation_result.append(criteria_result)
 
         return evaluation_result
+
+    def _save_team_aggregation_as_csv(
+        self, aggregation_data: dict, csv_file_path: Path
+    ) -> None:
+        """チーム集計結果をCSV形式で保存
+
+        Args:
+            aggregation_data: JSON出力と同じ構造の集計データ
+            csv_file_path: CSVファイルの保存先パス
+        """
+        try:
+            team_averages = aggregation_data.get("team_averages", {})
+            criteria_evaluated = aggregation_data.get("summary", {}).get(
+                "criteria_evaluated", []
+            )
+
+            if not team_averages or not criteria_evaluated:
+                logger.warning("No team averages data found for CSV output")
+                return
+
+            with open(csv_file_path, "w", encoding="utf-8", newline="") as csvfile:
+                writer = csv.writer(csvfile)
+
+                # ヘッダー行（チーム、各評価基準の平均順位）
+                header = ["Team"]
+                for criteria in criteria_evaluated:
+                    header.append(criteria)
+                writer.writerow(header)
+
+                # 各チームのデータを書き出し
+                for team in sorted(team_averages.keys()):
+                    row = [team]
+
+                    for criteria in criteria_evaluated:
+                        # 平均順位（小数点第6位まで）
+                        avg = team_averages.get(team, {}).get(criteria, 0.0)
+                        row.append(f"{avg:.6f}")
+
+                    writer.writerow(row)
+
+            logger.info(
+                f"CSV data saved with {len(team_averages)} teams and {len(criteria_evaluated)} criteria"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to save CSV file: {e}", exc_info=True)
