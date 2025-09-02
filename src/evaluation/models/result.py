@@ -1,4 +1,4 @@
-from typing import Self, Optional
+from typing import Self, Optional, TypeAlias
 from pydantic import BaseModel, Field
 from src.evaluation.models.llm_response import EvaluationLLMResponse, EvaluationElement
 
@@ -127,3 +127,73 @@ class EvaluationResult(list[CriteriaEvaluationResult]):
             評価基準名のリスト
         """
         return [result.criteria_name for result in self]
+
+
+# 型エイリアス定義
+TeamResultsDict: TypeAlias = dict[str, dict[str, list[EvaluationResultElement]]]
+
+
+class TeamAggregator(TeamResultsDict):
+    """チーム別集計データを管理するクラス
+
+    構造: {team_name: {criteria_name: [EvaluationResultElement]}}
+    """
+
+    def add_game_result(self, evaluation_result: EvaluationResult) -> None:
+        """ゲーム結果をチーム別に集約
+
+        Args:
+            evaluation_result: 単一ゲームの評価結果
+        """
+        for criteria_result in evaluation_result:
+            criteria_name = criteria_result.criteria_name
+
+            for element in criteria_result:
+                team = element.team
+
+                # チームが存在しない場合は初期化
+                if team not in self:
+                    self[team] = {}
+
+                # 評価基準が存在しない場合は初期化
+                if criteria_name not in self[team]:
+                    self[team][criteria_name] = []
+
+                # 評価要素を追加
+                self[team][criteria_name].append(element)
+
+    def calculate_team_averages(self) -> dict[str, dict[str, float]]:
+        """チーム別平均順位を算出
+
+        Returns:
+            {team_name: {criteria_name: average_ranking}}
+        """
+        team_averages = {}
+
+        for team, criteria_dict in self.items():
+            team_averages[team] = {}
+
+            for criteria_name, elements in criteria_dict.items():
+                if elements:  # 空でない場合
+                    rankings = [element.ranking for element in elements]
+                    team_averages[team][criteria_name] = sum(rankings) / len(rankings)
+                else:
+                    team_averages[team][criteria_name] = 0.0
+
+        return team_averages
+
+    def get_team_count_by_criteria(self) -> dict[str, dict[str, int]]:
+        """チーム別・評価基準別のサンプル数を取得
+
+        Returns:
+            {team_name: {criteria_name: sample_count}}
+        """
+        team_counts = {}
+
+        for team, criteria_dict in self.items():
+            team_counts[team] = {}
+
+            for criteria_name, elements in criteria_dict.items():
+                team_counts[team][criteria_name] = len(elements)
+
+        return team_counts

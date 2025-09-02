@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 from typing import Any
+from src.evaluation.models.result import EvaluationResult
 
 from src.aiwolf_log.game_log import AIWolfGameLog
 
@@ -52,7 +53,9 @@ class GameProcessor:
         max_threads = self.data_prep_service.get_evaluation_workers()
         self.evaluation_service = EvaluationExecutionService(config, max_threads)
 
-    def process(self, game_log: AIWolfGameLog, output_dir: Path) -> bool:
+    def process(
+        self, game_log: AIWolfGameLog, output_dir: Path
+    ) -> tuple[bool, dict | None]:
         """ゲームログを処理して評価結果を出力
 
         Args:
@@ -60,7 +63,7 @@ class GameProcessor:
             output_dir: 結果出力ディレクトリ
 
         Returns:
-            処理が成功したかどうか
+            (処理が成功したかどうか, 評価結果辞書またはNone)
         """
         try:
             logger.info(f"Processing game: {game_log.game_id}")
@@ -94,15 +97,46 @@ class GameProcessor:
                 game_log, game_info, evaluation_result, output_dir
             )
 
+            # 7. 評価結果を辞書形式に変換
+            evaluation_dict = self._convert_evaluation_result_to_dict(evaluation_result)
+
             logger.info(f"Successfully processed game: {game_log.game_id}")
-            return True
+            return True, evaluation_dict
 
         except (FileNotFoundError, ValueError, KeyError) as e:
             logger.error(f"Expected error processing game {game_log.game_id}: {e}")
-            return False
+            return False, None
         except Exception as e:
             logger.error(
                 f"Unexpected error processing game {game_log.game_id}: {e}",
                 exc_info=True,
             )
-            return False
+            return False, None
+
+    def _convert_evaluation_result_to_dict(
+        self, evaluation_result: EvaluationResult
+    ) -> dict:
+        """評価結果をプロセス間通信用の辞書形式に変換
+
+        Args:
+            evaluation_result: 評価結果
+
+        Returns:
+            辞書形式の評価結果
+        """
+        evaluation_dict = {"evaluations": {}}
+
+        for criteria_result in evaluation_result:
+            evaluation_dict["evaluations"][criteria_result.criteria_name] = {
+                "rankings": [
+                    {
+                        "player_name": elem.player_name,
+                        "team": elem.team,
+                        "ranking": elem.ranking,
+                        "reasoning": elem.reasoning,
+                    }
+                    for elem in criteria_result
+                ]
+            }
+
+        return evaluation_dict

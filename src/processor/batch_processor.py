@@ -1,5 +1,6 @@
 """バッチ処理を管理するクラス."""
 
+import json
 import logging
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import Any
 
 from src.aiwolf_log import AIWolfGameLog
 from src.utils.game_log_finder import find_all_game_logs
+from src.evaluation.models.result import TeamAggregator
 
 from .game_processor import GameProcessor
 from .models import ProcessingConfig, ProcessingResult
@@ -55,6 +57,10 @@ class BatchProcessor:
         # 結果ログ出力
         self._log_processing_summary(result)
 
+        # チーム集計実行
+        if result.completed > 0:
+            self._generate_team_aggregation(result.evaluation_results)
+
         return result
 
     def _find_game_logs(self) -> list[AIWolfGameLog]:
@@ -101,9 +107,10 @@ class BatchProcessor:
             # 結果収集
             for future, game_log in futures:
                 try:
-                    success = future.result()
-                    if success:
+                    success, evaluation_dict = future.result()
+                    if success and evaluation_dict:
                         result.completed += 1
+                        result.evaluation_results.append(evaluation_dict)
                         logger.info(
                             f"{GameProcessor.SUCCESS_INDICATOR} Completed: {game_log.game_id}"
                         )
@@ -135,7 +142,7 @@ class BatchProcessor:
     @staticmethod
     def _process_single_game_worker(
         game_log: AIWolfGameLog, config: dict[str, Any], output_dir: Path
-    ) -> bool:
+    ) -> tuple[bool, dict | None]:
         """プロセス間で実行される単一ゲーム処理のワーカー関数
 
         Args:
@@ -144,7 +151,91 @@ class BatchProcessor:
             output_dir: 出力ディレクトリ
 
         Returns:
-            処理が成功したかどうか
+            (処理が成功したかどうか, 評価結果辞書またはNone)
         """
         processor = GameProcessor(config)
         return processor.process(game_log, output_dir)
+
+    def _generate_team_aggregation(self, evaluation_results: list[dict]) -> None:
+        """チーム集計結果を生成して保存
+
+        Args:
+            evaluation_results: 評価結果辞書のリスト
+        """
+        logger.info("Generating team aggregation results")
+
+        try:
+            aggregator = TeamAggregator()
+
+            # 各評価結果辞書をTeamAggregatorに変換して追加
+            for evaluation_dict in evaluation_results:
+                evaluation_result = self._convert_dict_to_evaluation_result(
+                    evaluation_dict
+                )
+                aggregator.add_game_result(evaluation_result)
+
+            # チーム集計結果を計算・保存
+            team_averages = aggregator.calculate_team_averages()
+            team_counts = aggregator.get_team_count_by_criteria()
+
+            aggregation_data = {
+                "team_averages": team_averages,
+                "team_sample_counts": team_counts,
+                "summary": {
+                    "total_games_processed": len(evaluation_results),
+                    "teams_found": list(team_averages.keys()),
+                    "criteria_evaluated": list(
+                        next(iter(team_averages.values()), {}).keys()
+                    ),
+                },
+            }
+
+            # 集計結果をファイル保存
+            aggregation_file = (
+                self.processing_config.output_dir / "team_aggregation.json"
+            )
+            with open(aggregation_file, "w", encoding="utf-8") as f:
+                json.dump(aggregation_data, f, ensure_ascii=False, indent=2)
+
+            logger.info(f"Team aggregation saved to: {aggregation_file}")
+            logger.info(f"Teams processed: {list(team_averages.keys())}")
+
+        except Exception as e:
+            logger.error(f"Failed to generate team aggregation: {e}", exc_info=True)
+
+    def _convert_dict_to_evaluation_result(self, evaluation_dict: dict):
+        """辞書形式の評価結果をEvaluationResultオブジェクトに変換
+
+        Args:
+            evaluation_dict: 辞書形式の評価結果
+
+        Returns:
+            EvaluationResult オブジェクト
+        """
+        from src.evaluation.models.result import (
+            EvaluationResult,
+            CriteriaEvaluationResult,
+            EvaluationResultElement,
+        )
+
+        evaluation_result = EvaluationResult()
+
+        for criteria_name, criteria_data in evaluation_dict.get(
+            "evaluations", {}
+        ).items():
+            elements = []
+            for ranking_data in criteria_data.get("rankings", []):
+                element = EvaluationResultElement(
+                    player_name=ranking_data["player_name"],
+                    reasoning=ranking_data["reasoning"],
+                    ranking=ranking_data["ranking"],
+                    team=ranking_data["team"],
+                )
+                elements.append(element)
+
+            criteria_result = CriteriaEvaluationResult(
+                criteria_name=criteria_name, elements=elements
+            )
+            evaluation_result.append(criteria_result)
+
+        return evaluation_result
