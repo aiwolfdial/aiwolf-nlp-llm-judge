@@ -280,3 +280,30 @@ AIWolf NLP LLM Judgeプロジェクトは、最先端の言語モデルを使用
   - `_save_team_aggregation_results`: 集計結果保存処理
 
 このシステムは、プロダクション対応可能な堅牢性と、将来のマイクロサービス化への明確で安全な拡張パスを提供しています。
+
+## トラブルシューティング
+
+### チーム集計結果が空になる問題
+
+**症状**: `data/output/team_aggregation.json`に結果が表示されず、CSV出力もされない
+
+**原因**: 手動でのチーム集計実行時に`settings_path`設定が不足している
+
+**解決方法**:
+```python
+# 設定ファイル読み込み後に以下を追加
+config['settings_path'] = 'config/settings.yaml'
+```
+
+**詳細**:
+- CLIでの実行時は`src/cli.py:48`で自動的に`settings_path`が追加される
+- 手動実行時は`DataPreparationService`が`settings_path`を要求するため必須
+- 個別の結果ファイル（`*_result.json`）にはチームデータが正常に含まれている
+- 問題は集計処理の設定不備であり、データそのものの問題ではない
+
+**確認方法**:
+```bash
+# チーム集計結果の確認
+ls -la data/output/team_aggregation.*
+cat data/output/team_aggregation.json | jq '.summary'
+```
