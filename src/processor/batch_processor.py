@@ -166,112 +166,175 @@ class BatchProcessor:
         logger.info("Generating team aggregation results")
 
         try:
-            # 評価設定を読み込んで、criteria_name -> description のマッピングを作成
-            from src.processor.pipeline import DataPreparationService
+            # 評価設定マッピングを作成
+            criteria_mappings = self._load_evaluation_criteria_mappings()
 
-            data_prep_service = DataPreparationService(self.config)
-            evaluation_config = data_prep_service.load_evaluation_config()
-
-            # criteria_name -> description のマッピングを作成
-            criteria_name_to_description = {
-                criteria.name: criteria.description for criteria in evaluation_config
-            }
-
-            # criteria_name -> order のマッピングを作成
-            criteria_name_to_order = {
-                criteria.name: criteria.order for criteria in evaluation_config
-            }
-
-            aggregator = TeamAggregator()
-
-            # 各評価結果辞書をTeamAggregatorに変換して追加
-            for evaluation_dict in evaluation_results:
-                evaluation_result = self._convert_dict_to_evaluation_result(
-                    evaluation_dict
-                )
-                aggregator.add_game_result(evaluation_result)
-
-            # チーム集計結果を計算・保存
-            team_averages = aggregator.calculate_team_averages()
-            team_counts = aggregator.get_team_count_by_criteria()
-
-            # criteria_name を description に変換し、orderでソート
-            def convert_criteria_names_to_descriptions(
-                data: dict[str, dict[str, Any]],
-            ) -> dict[str, dict[str, Any]]:
-                """criteria_name を description に変換し、orderでソート"""
-                converted = {}
-                for team, criteria_dict in data.items():
-                    # criteria_nameをorderでソートしてからdescriptionに変換
-                    sorted_criteria = sorted(
-                        criteria_dict.items(),
-                        key=lambda x: criteria_name_to_order.get(x[0], 999),
-                    )
-                    converted[team] = {}
-                    for criteria_name, value in sorted_criteria:
-                        description = criteria_name_to_description.get(
-                            criteria_name, criteria_name
-                        )
-                        converted[team][description] = value
-                return converted
-
-            # 変換された集計結果
-            team_averages_with_descriptions = convert_criteria_names_to_descriptions(
-                team_averages
-            )
-            team_counts_with_descriptions = convert_criteria_names_to_descriptions(
-                team_counts
+            # チーム集計データを作成
+            aggregation_data = self._create_team_aggregation_data(
+                evaluation_results, criteria_mappings
             )
 
-            # summaryの評価基準もorderでソート
-            criteria_evaluated = []
-            if team_averages_with_descriptions:
-                first_team_criteria = next(
-                    iter(team_averages_with_descriptions.values()), {}
-                )
-                # descriptionからcriteria_nameに逆変換してソート
-                description_to_criteria_name = {
-                    v: k for k, v in criteria_name_to_description.items()
-                }
-                criteria_with_order = []
-                for description in first_team_criteria.keys():
-                    criteria_name = description_to_criteria_name.get(
-                        description, description
-                    )
-                    order = criteria_name_to_order.get(criteria_name, 999)
-                    criteria_with_order.append((order, description))
-
-                criteria_evaluated = [desc for _, desc in sorted(criteria_with_order)]
-
-            aggregation_data = {
-                "team_averages": team_averages_with_descriptions,
-                "team_sample_counts": team_counts_with_descriptions,
-                "summary": {
-                    "total_games_processed": len(evaluation_results),
-                    "teams_found": list(team_averages_with_descriptions.keys()),
-                    "criteria_evaluated": criteria_evaluated,
-                },
-            }
-
-            # 集計結果をJSONファイル保存
-            aggregation_file = (
-                self.processing_config.output_dir / "team_aggregation.json"
-            )
-            with open(aggregation_file, "w", encoding="utf-8") as f:
-                json.dump(aggregation_data, f, ensure_ascii=False, indent=2)
-
-            logger.info(f"Team aggregation saved to: {aggregation_file}")
-
-            # 集計結果をCSVファイル保存
-            csv_file = self.processing_config.output_dir / "team_aggregation.csv"
-            self._save_team_aggregation_as_csv(aggregation_data, csv_file)
-            logger.info(f"Team aggregation CSV saved to: {csv_file}")
-            logger.info(
-                f"Teams processed: {list(team_averages_with_descriptions.keys())}"
-            )
+            # 集計結果を保存
+            self._save_team_aggregation_results(aggregation_data)
 
         except Exception as e:
             logger.error(f"Failed to generate team aggregation: {e}", exc_info=True)
+
+    def _load_evaluation_criteria_mappings(self) -> dict[str, dict[str, Any]]:
+        """評価基準のマッピング情報を読み込み
+
+        Returns:
+            criteria_name_to_description: criteria名 -> description のマッピング
+            criteria_name_to_order: criteria名 -> order のマッピング
+        """
+        from src.processor.pipeline import DataPreparationService
+
+        data_prep_service = DataPreparationService(self.config)
+        evaluation_config = data_prep_service.load_evaluation_config()
+
+        return {
+            "criteria_name_to_description": {
+                criteria.name: criteria.description for criteria in evaluation_config
+            },
+            "criteria_name_to_order": {
+                criteria.name: criteria.order for criteria in evaluation_config
+            },
+        }
+
+    def _create_team_aggregation_data(
+        self,
+        evaluation_results: list[dict],
+        criteria_mappings: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        """チーム集計データを作成
+
+        Args:
+            evaluation_results: 評価結果辞書のリスト
+            criteria_mappings: 評価基準マッピング情報
+
+        Returns:
+            集計データ辞書
+        """
+        aggregator = TeamAggregator()
+
+        # 各評価結果辞書をTeamAggregatorに変換して追加
+        for evaluation_dict in evaluation_results:
+            evaluation_result = self._convert_dict_to_evaluation_result(evaluation_dict)
+            aggregator.add_game_result(evaluation_result)
+
+        # チーム集計結果を計算
+        team_averages = aggregator.calculate_team_averages()
+        team_counts = aggregator.get_team_count_by_criteria()
+
+        # criteria名をdescriptionに変換
+        team_averages_with_descriptions = self._convert_criteria_names_to_descriptions(
+            team_averages, criteria_mappings
+        )
+        team_counts_with_descriptions = self._convert_criteria_names_to_descriptions(
+            team_counts, criteria_mappings
+        )
+
+        # 評価基準リストを作成（orderでソート済み）
+        criteria_evaluated = self._create_sorted_criteria_list(
+            team_averages_with_descriptions, criteria_mappings
+        )
+
+        return {
+            "team_averages": team_averages_with_descriptions,
+            "team_sample_counts": team_counts_with_descriptions,
+            "summary": {
+                "total_games_processed": len(evaluation_results),
+                "teams_found": list(team_averages_with_descriptions.keys()),
+                "criteria_evaluated": criteria_evaluated,
+            },
+        }
+
+    def _convert_criteria_names_to_descriptions(
+        self,
+        data: dict[str, dict[str, Any]],
+        criteria_mappings: dict[str, dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        """criteria_name を description に変換し、orderでソート
+
+        Args:
+            data: 変換対象のデータ
+            criteria_mappings: 評価基準マッピング情報
+
+        Returns:
+            変換・ソート済みデータ
+        """
+        criteria_name_to_description = criteria_mappings["criteria_name_to_description"]
+        criteria_name_to_order = criteria_mappings["criteria_name_to_order"]
+
+        converted = {}
+        for team, criteria_dict in data.items():
+            # criteria_nameをorderでソートしてからdescriptionに変換
+            sorted_criteria = sorted(
+                criteria_dict.items(),
+                key=lambda x: criteria_name_to_order.get(x[0], 999),
+            )
+            converted[team] = {}
+            for criteria_name, value in sorted_criteria:
+                description = criteria_name_to_description.get(
+                    criteria_name, criteria_name
+                )
+                converted[team][description] = value
+        return converted
+
+    def _create_sorted_criteria_list(
+        self,
+        team_averages_with_descriptions: dict[str, dict[str, Any]],
+        criteria_mappings: dict[str, dict[str, Any]],
+    ) -> list[str]:
+        """orderでソートされた評価基準リストを作成
+
+        Args:
+            team_averages_with_descriptions: description変換済みチーム平均データ
+            criteria_mappings: 評価基準マッピング情報
+
+        Returns:
+            ソート済み評価基準リスト
+        """
+        if not team_averages_with_descriptions:
+            return []
+
+        criteria_name_to_description = criteria_mappings["criteria_name_to_description"]
+        criteria_name_to_order = criteria_mappings["criteria_name_to_order"]
+
+        first_team_criteria = next(iter(team_averages_with_descriptions.values()), {})
+
+        # descriptionからcriteria_nameに逆変換してソート
+        description_to_criteria_name = {
+            v: k for k, v in criteria_name_to_description.items()
+        }
+        criteria_with_order = []
+        for description in first_team_criteria.keys():
+            criteria_name = description_to_criteria_name.get(description, description)
+            order = criteria_name_to_order.get(criteria_name, 999)
+            criteria_with_order.append((order, description))
+
+        return [desc for _, desc in sorted(criteria_with_order)]
+
+    def _save_team_aggregation_results(self, aggregation_data: dict[str, Any]) -> None:
+        """チーム集計結果をJSONとCSVで保存
+
+        Args:
+            aggregation_data: 集計データ
+        """
+        # JSONファイル保存
+        aggregation_file = self.processing_config.output_dir / "team_aggregation.json"
+        with open(aggregation_file, "w", encoding="utf-8") as f:
+            json.dump(aggregation_data, f, ensure_ascii=False, indent=2)
+        logger.info(f"Team aggregation saved to: {aggregation_file}")
+
+        # CSVファイル保存
+        csv_file = self.processing_config.output_dir / "team_aggregation.csv"
+        self._save_team_aggregation_as_csv(aggregation_data, csv_file)
+        logger.info(f"Team aggregation CSV saved to: {csv_file}")
+
+        # 処理結果ログ出力
+        teams_processed = list(aggregation_data["team_averages"].keys())
+        logger.info(f"Teams processed: {teams_processed}")
 
     def _convert_dict_to_evaluation_result(self, evaluation_dict: dict):
         """辞書形式の評価結果をEvaluationResultオブジェクトに変換
