@@ -2,7 +2,6 @@
 
 import re
 from pathlib import Path
-from typing import List
 
 from src.evaluation.models import (
     EvaluationConfig,
@@ -49,8 +48,8 @@ class CriteriaLoader:
 
     @staticmethod
     def _load_common_criteria(
-        common_criteria_data: List[dict],
-    ) -> List[EvaluationCriteria]:
+        common_criteria_data: list[dict],
+    ) -> list[EvaluationCriteria]:
         """共通評価基準を読み込み
 
         Args:
@@ -72,7 +71,7 @@ class CriteriaLoader:
         return criteria_list
 
     @staticmethod
-    def _load_specific_criteria(specific_data: dict) -> List[EvaluationCriteria]:
+    def _load_specific_criteria(specific_data: dict) -> list[EvaluationCriteria]:
         """ゲーム固有評価基準を読み込み
 
         Args:
@@ -108,7 +107,7 @@ class CriteriaLoader:
 
     @staticmethod
     def _load_criteria_dict(
-        criteria_dict: dict, applicable_games: List[int], category: CriteriaCategory
+        criteria_dict: dict, applicable_games: list[int], category: CriteriaCategory
     ) -> EvaluationCriteria:
         """評価基準辞書を読み込んでEvaluationCriteriaオブジェクトを作成
 

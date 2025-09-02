@@ -4,7 +4,7 @@ import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from src.aiwolf_log.game_log import AIWolfGameLog
 from src.evaluation.loaders.criteria_loader import CriteriaLoader
@@ -40,11 +40,10 @@ class GameProcessor:
     """
 
     # クラス定数
-    DEFAULT_SETTINGS_PATH = "config/settings.yaml"
     SUCCESS_INDICATOR = "✓"
     FAILURE_INDICATOR = "✗"
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         """GameProcessorを初期化
 
         Args:
@@ -54,12 +53,11 @@ class GameProcessor:
             ConfigurationError: 設定が不正な場合
         """
         self.config = config
-        self.settings_path = Path(
-            config.get("settings_path", self.DEFAULT_SETTINGS_PATH)
-        )
 
-        if not self.settings_path.exists():
-            raise ConfigurationError(f"Settings file not found: {self.settings_path}")
+        if "settings_path" not in config:
+            raise ConfigurationError("settings_path is required in configuration")
+
+        self.settings_path = Path(config["settings_path"])
 
         # 設定から評価用スレッド数を読み込み（デフォルト8）
         self.max_evaluation_threads = self._load_evaluation_workers()
@@ -184,7 +182,7 @@ class GameProcessor:
 
     def _format_game_log(
         self, game_log: AIWolfGameLog, game_info: GameInfo
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """ゲームログをフォーマット変換
 
         Args:
@@ -239,7 +237,7 @@ class GameProcessor:
         self,
         evaluation_config: EvaluationConfig,
         game_info: GameInfo,
-        formatted_data: List[Dict[str, Any]],
+        formatted_data: list[dict[str, Any]],
         character_info: str,
     ) -> EvaluationResult:
         """評価を並列実行
@@ -311,10 +309,10 @@ class GameProcessor:
     @staticmethod
     def _evaluate_criterion(
         criteria: EvaluationCriteria,
-        formatted_data: List[Dict[str, Any]],
+        formatted_data: list[dict[str, Any]],
         evaluator: Evaluator,
         character_info: str,
-    ) -> Tuple[str, EvaluationLLMResponse]:
+    ) -> tuple[str, EvaluationLLMResponse]:
         """単一評価基準の評価を実行
 
         Args:
@@ -365,7 +363,7 @@ class GameProcessor:
         game_log: AIWolfGameLog,
         game_info: GameInfo,
         evaluation_result: EvaluationResult,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """評価結果データを構築
 
         Args:
@@ -409,7 +407,7 @@ class GameProcessor:
         return result_data
 
     def _log_debug_info(
-        self, evaluation_result: EvaluationResult, player_to_team: Dict[str, str]
+        self, evaluation_result: EvaluationResult, player_to_team: dict[str, str]
     ) -> None:
         """デバッグ情報をログ出力
 

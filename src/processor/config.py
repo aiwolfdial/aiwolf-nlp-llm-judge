@@ -3,7 +3,7 @@
 import multiprocessing as mp
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from src.game.models import GameFormat
 from .errors import ConfigurationError
@@ -26,7 +26,7 @@ class ProcessingConfig:
     game_format: GameFormat
 
     @staticmethod
-    def from_config_dict(config: Dict[str, Any]) -> "ProcessingConfig":
+    def from_config_dict(config: dict[str, Any]) -> "ProcessingConfig":
         """設定辞書から処理設定を作成
 
         Args:

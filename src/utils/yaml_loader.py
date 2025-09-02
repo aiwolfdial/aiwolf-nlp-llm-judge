@@ -2,14 +2,14 @@
 
 import yaml
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
 class YAMLLoader:
     """YAMLファイルの基本読み込み機能を提供するクラス."""
 
     @staticmethod
-    def load_yaml(file_path: Path) -> Dict[str, Any]:
+    def load_yaml(file_path: Path) -> dict[str, Any]:
         """YAMLファイルを読み込んで辞書として返す
 
         Args:

@@ -3,7 +3,7 @@
 import logging
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from src.aiwolf_log import AIWolfGameLog
 from src.utils.game_log_finder import find_all_game_logs
@@ -22,7 +22,7 @@ class BatchProcessor:
     処理結果の統計情報を管理する責任を持ちます。
     """
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         """BatchProcessorを初期化
 
         Args:
@@ -58,7 +58,7 @@ class BatchProcessor:
 
         return result
 
-    def _find_game_logs(self) -> List[AIWolfGameLog]:
+    def _find_game_logs(self) -> list[AIWolfGameLog]:
         """ゲームログを検索
 
         Returns:
@@ -70,7 +70,7 @@ class BatchProcessor:
         return game_logs
 
     def _execute_parallel_processing(
-        self, game_logs: List[AIWolfGameLog]
+        self, game_logs: list[AIWolfGameLog]
     ) -> ProcessingResult:
         """並列処理を実行
 
@@ -135,7 +135,7 @@ class BatchProcessor:
 
     @staticmethod
     def _process_single_game_worker(
-        game_log: AIWolfGameLog, config: Dict[str, Any], output_dir: Path
+        game_log: AIWolfGameLog, config: dict[str, Any], output_dir: Path
     ) -> bool:
         """プロセス間で実行される単一ゲーム処理のワーカー関数
 
