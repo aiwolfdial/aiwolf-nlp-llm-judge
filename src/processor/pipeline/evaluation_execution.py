@@ -1,6 +1,7 @@
 """評価実行・並列処理サービス."""
 
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
@@ -32,6 +33,30 @@ class EvaluationExecutionService:
         """
         self.config = config
         self.max_evaluation_threads = max_evaluation_threads
+        # 設定からmax_retriesを読み取り（デフォルトは3）
+        self.max_retries = config.get("processing", {}).get("max_retries", 3)
+
+    @staticmethod
+    def _extract_player_names_from_character_info(character_info: str) -> set[str]:
+        """キャラクター情報文字列からプレイヤー名を抽出
+
+        Args:
+            character_info: "- agent_name: profile" 形式の文字列
+
+        Returns:
+            プレイヤー名のセット
+        """
+        if not character_info:
+            return set()
+
+        player_names = set()
+        # "- name: profile" の形式から name を抽出
+        for line in character_info.split("\n"):
+            match = re.match(r"^-\s+([^:]+):", line.strip())
+            if match:
+                player_names.add(match.group(1).strip())
+
+        return player_names
 
     def execute_evaluations(
         self,
@@ -75,6 +100,11 @@ class EvaluationExecutionService:
             # ThreadPoolExecutorを使用した並列評価
             max_workers = min(len(criteria_for_game), self.max_evaluation_threads)
 
+            # プレイヤー名を抽出
+            valid_player_names = self._extract_player_names_from_character_info(
+                character_info
+            )
+
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 # タスク投入
                 future_to_criteria = {
@@ -84,6 +114,9 @@ class EvaluationExecutionService:
                         formatted_data,
                         evaluator,
                         character_info,
+                        game_info.player_count,
+                        valid_player_names,
+                        self.max_retries,
                     ): criteria
                     for criteria in criteria_for_game
                 }
@@ -118,25 +151,61 @@ class EvaluationExecutionService:
         formatted_data: list[dict[str, Any]],
         evaluator: Evaluator,
         character_info: str,
+        player_count: int,
+        valid_player_names: set[str],
+        max_retries: int,
     ) -> tuple[str, EvaluationLLMResponse]:
-        """単一評価基準の評価を実行
+        """単一評価基準の評価を実行（バリデーション付きで再試行）
 
         Args:
             criteria: 評価基準
             formatted_data: フォーマット済みログデータ
             evaluator: LLM評価器
             character_info: キャラクター情報
+            player_count: 期待するプレイヤー数
+            valid_player_names: 有効なプレイヤー名のセット
+            max_retries: 最大再試行回数
 
         Returns:
             (評価基準名, LLMレスポンス)のタプル
+
+        Raises:
+            ValueError: 最大再試行回数後もバリデーションに失敗した場合
         """
         logger.debug(f"Evaluating: {criteria.name}")
 
-        llm_response = evaluator.evaluation(
-            criteria=criteria,
-            log=formatted_data,
-            output_structure=EvaluationLLMResponse,
-            character_info=character_info,
-        )
+        for attempt in range(max_retries + 1):
+            try:
+                # LLMから基本的な応答を取得
+                llm_response = evaluator.evaluation(
+                    criteria=criteria,
+                    log=formatted_data,
+                    output_structure=EvaluationLLMResponse,
+                    character_info=character_info,
+                )
 
-        return criteria.name, llm_response
+                # バリデーション付きで再作成
+                validated_response = EvaluationLLMResponse.create_with_validation(
+                    rankings=llm_response.rankings,
+                    player_count=player_count,
+                    valid_player_names=valid_player_names,
+                )
+
+                logger.debug(f"Successfully validated evaluation: {criteria.name}")
+                return criteria.name, validated_response
+
+            except ValueError as e:
+                attempt_msg = f"attempt {attempt + 1}/{max_retries + 1}"
+                logger.warning(
+                    f"Validation failed for {criteria.name} ({attempt_msg}): {e}"
+                )
+
+                if attempt == max_retries:
+                    error_msg = f"Failed to get valid evaluation for {criteria.name} after {max_retries + 1} attempts"
+                    logger.error(error_msg)
+                    raise ValueError(error_msg) from e
+
+                logger.info(f"Retrying evaluation for {criteria.name}...")
+
+        # このコードに到達することはないが、型チェッカーのために必要
+        raise RuntimeError("Unexpected code path reached")

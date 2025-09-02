@@ -7,7 +7,7 @@ path:
 # LLM設定
 llm:
   prompt_yml: config/prompts.yaml
-  model: "gpt-4o-mini"
+  model: "gpt-5"
 
 # ゲーム形式設定
 game:
@@ -21,3 +21,4 @@ processing:
   encoding: "utf-8"          # ファイルエンコーディング
   max_workers: 4             # プロセス並列処理数（ゲーム間並列処理）
   evaluation_workers: 8      # スレッド並列処理数（評価基準並列処理）
+  max_retries: 5             # LLMバリデーション失敗時の最大再試行回数
