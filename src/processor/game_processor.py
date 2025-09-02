@@ -77,12 +77,19 @@ class GameProcessor:
             # 3. キャラクター情報の取得
             character_info = self.log_formatting_service.get_character_info(game_log)
 
-            # 4. 評価実行（マルチスレッド）
+            # 4. チームマッピングの取得
+            agent_to_team_mapping = game_log.get_agent_to_team_mapping()
+
+            # 5. 評価実行（マルチスレッド）
             evaluation_result = self.evaluation_service.execute_evaluations(
-                evaluation_config, game_info, formatted_data, character_info
+                evaluation_config,
+                game_info,
+                formatted_data,
+                character_info,
+                agent_to_team_mapping,
             )
 
-            # 5. 結果保存
+            # 6. 結果保存
             self.result_service.save_results(
                 game_log, game_info, evaluation_result, output_dir
             )

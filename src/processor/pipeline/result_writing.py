@@ -60,12 +60,8 @@ class ResultWritingService:
         Returns:
             構築された結果データ辞書
         """
-        # プレイヤー名からチーム名へのマッピングを取得
-        json_reader = game_log.get_json_reader()
-        player_to_team = json_reader.get_agent_to_team_mapping()
-
         # デバッグ用ログ
-        self._log_debug_info(evaluation_result, player_to_team)
+        self._log_debug_info(evaluation_result)
 
         result_data = {
             "game_id": game_log.game_id,
@@ -76,39 +72,34 @@ class ResultWritingService:
             "evaluations": {},
         }
 
-        for criteria_name in evaluation_result.get_all_criteria_names():
-            response = evaluation_result.get_by_criteria(criteria_name)
+        for criteria_name, criteria_result in evaluation_result.items():
             result_data["evaluations"][criteria_name] = {
                 "rankings": [
                     {
                         "player_name": elem.player_name,
-                        "team": player_to_team.get(elem.player_name, "unknown"),
+                        "team": elem.team,  # 既にチーム情報が含まれている
                         "ranking": elem.ranking,
                         "reasoning": elem.reasoning,
                     }
-                    for elem in response.rankings
+                    for elem in criteria_result
                 ]
             }
 
         return result_data
 
-    def _log_debug_info(
-        self, evaluation_result: EvaluationResult, player_to_team: dict[str, str]
-    ) -> None:
+    def _log_debug_info(self, evaluation_result: EvaluationResult) -> None:
         """デバッグ情報をログ出力
 
         Args:
             evaluation_result: 評価結果
-            player_to_team: プレイヤー→チームマッピング
         """
-        logger.debug(f"Player to team mapping: {player_to_team}")
 
-        criteria_names = evaluation_result.get_all_criteria_names()
-        if criteria_names:
-            sample_criteria = criteria_names[0]
-            sample_response = evaluation_result.get_by_criteria(sample_criteria)
-            if sample_response.rankings:
+        if evaluation_result:
+            sample_criteria_name, sample_criteria_result = next(
+                iter(evaluation_result.items())
+            )
+            if sample_criteria_result:
                 sample_players = [
-                    elem.player_name for elem in sample_response.rankings[:3]
+                    elem.player_name for elem in sample_criteria_result[:3]
                 ]
                 logger.debug(f"Sample player names from LLM: {sample_players}")

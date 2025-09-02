@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, Optional
 from pydantic import BaseModel, Field
 from src.evaluation.models.llm_response import EvaluationLLMResponse, EvaluationElement
 
@@ -30,36 +30,40 @@ class EvaluationResultElement(BaseModel):
         )
 
 
-class EvaluationResult(list[EvaluationLLMResponse]):
-    """評価結果全体を表すクラス（EvaluationLLMResponseのリストを継承）."""
+class CriteriaEvaluationResult(list[EvaluationResultElement]):
+    """単一の評価基準に対する結果を表すクラス."""
 
-    def __init__(self):
-        super().__init__()
-        self._criteria_index: dict[str, int] = {}  # criteria_name -> index
+    def __init__(
+        self,
+        criteria_name: str,
+        elements: Optional[list[EvaluationResultElement]] = None,
+    ):
+        """初期化
 
-    def add_response(self, criteria_name: str, response: EvaluationLLMResponse) -> None:
-        """評価レスポンスを追加."""
-        if criteria_name in self._criteria_index:
-            # 既存の基準を更新
-            index = self._criteria_index[criteria_name]
-            self[index] = response
-        else:
-            # 新しい基準を追加
-            self.append(response)
-            self._criteria_index[criteria_name] = len(self) - 1
+        Args:
+            criteria_name: 評価基準名
+            elements: 評価結果要素のリスト
+        """
+        super().__init__(elements or [])
+        self.criteria_name = criteria_name
 
-    def get_by_criteria(self, criteria_name: str) -> EvaluationLLMResponse:
-        """評価基準名でレスポンスを取得."""
-        if criteria_name not in self._criteria_index:
-            raise KeyError(f"Criteria '{criteria_name}' not found")
-        index = self._criteria_index[criteria_name]
-        return self[index]
+    @classmethod
+    def from_llm_response(
+        cls,
+        criteria_name: str,
+        llm_response: EvaluationLLMResponse,
+        agent_to_team_mapping: dict[str, str],
+    ) -> Self:
+        """LLMレスポンスから評価結果を作成
 
-    def get_by_criteria_with_team(
-        self, criteria_name: str, agent_to_team_mapping: dict[str, str]
-    ) -> list[EvaluationResultElement]:
-        """評価基準名でチーム情報付きレスポンスを取得."""
-        llm_response = self.get_by_criteria(criteria_name)
+        Args:
+            criteria_name: 評価基準名
+            llm_response: LLMからの評価レスポンス
+            agent_to_team_mapping: エージェント名→チーム名のマッピング
+
+        Returns:
+            評価結果
+        """
         result_elements = []
         for element in llm_response.rankings:
             team = agent_to_team_mapping.get(element.player_name, "unknown")
@@ -67,12 +71,11 @@ class EvaluationResult(list[EvaluationLLMResponse]):
                 element, team
             )
             result_elements.append(result_element)
-        return result_elements
 
-    def get_all_criteria_names(self) -> list[str]:
-        """すべての評価基準名を取得."""
-        return list(self._criteria_index.keys())
+        return cls(criteria_name=criteria_name, elements=result_elements)
 
-    def has_criteria(self, criteria_name: str) -> bool:
-        """指定した評価基準が存在するか確認."""
-        return criteria_name in self._criteria_index
+
+class EvaluationResult(dict[str, CriteriaEvaluationResult]):
+    """全評価基準の結果を管理するクラス（辞書を継承、純粋なコンテナ）."""
+
+    pass

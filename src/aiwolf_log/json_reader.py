@@ -133,20 +133,26 @@ class AIWolfJSONReader:
         """エージェント表示名からチーム名へのマッピングを作成
 
         エージェント表示名（Minako, Yumi など）から、実際のチーム名を取得する
-        各エージェントのINITIALIZE requestから名前とindexを取得し、
-        agents配列でindexに対応するチーム情報を特定する
+        INITIALIZE requestの出現順序とagents配列のインデックス順序を対応付けることで、
+        より確実なマッピングを実現する
 
         Returns:
             エージェント名をキー、チーム名を値とする辞書
         """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         agent_to_team = {}
         entries = self.data.get("entries", [])
         agents_data = self.data.get("agents", [])
 
-        # agents配列から idx -> team のマッピングを作成
-        idx_to_team = {agent["idx"]: agent["team"] for agent in agents_data}
+        # agents配列をidx順にソートしてチーム情報を取得
+        agents_sorted = sorted(agents_data, key=lambda x: x["idx"])
+        team_list = [agent["team"] for agent in agents_sorted]
 
-        # 各エージェントのINITIALIZE requestを処理
+        # INITIALIZE requestからエージェント名を出現順に取得
+        agent_names_in_order = []
         processed_agents = set()
 
         for entry in entries:
@@ -161,31 +167,33 @@ class AIWolfJSONReader:
                     info = request_data.get("info", {})
                     agent_name = info.get("agent")
 
-                    # 既に処理済みのエージェントは スキップ
+                    # 既に処理済みのエージェントはスキップ
                     if not agent_name or agent_name in processed_agents:
                         continue
 
                     processed_agents.add(agent_name)
-
-                    # agentフィールドはINITIALIZE requestの中のagent値を使用
-                    # このagentは表示名（Minako, Yumiなど）
-
-                    # entries配列での順番やagent値から、対応するagents配列のindexを特定
-                    # 暫定的な実装：entry順序をベースに対応付け
-
-                    # より確実にするため、ファイル名やその他の情報から推測
-                    # ここでは単純な方法として、agents配列からteam情報を使用
-
-                    # INITIALIZE requestのagent値に基づき、対応するチーム名を設定
-                    # ここで使用する方法は、エントリーの順序や他の手がかりを使用
-
-                    # 暫定実装：エントリーの順序で判断（完璧ではないが、実用的）
-                    agent_idx = len(agent_to_team) + 1  # 1から開始する通し番号
-                    if agent_idx in idx_to_team:
-                        agent_to_team[agent_name] = idx_to_team[agent_idx]
+                    agent_names_in_order.append(agent_name)
 
             except (json.JSONDecodeError, KeyError, TypeError):
                 continue
+
+        # INITIALIZE requestの出現順序とagents配列の順序を対応付け
+        # 両方の配列の長さが一致する場合のみマッピングを作成
+        if len(agent_names_in_order) == len(team_list):
+            for agent_name, team in zip(agent_names_in_order, team_list):
+                agent_to_team[agent_name] = team
+        else:
+            # 長さが一致しない場合、フォールバック：エージェント名からチーム名を推測
+            logger.warning(
+                f"Agent names count ({len(agent_names_in_order)}) != teams count ({len(team_list)}). "
+                "Using fallback mapping."
+            )
+            # 利用可能なチーム情報がある限りマッピングを作成
+            for i, agent_name in enumerate(agent_names_in_order):
+                if i < len(team_list):
+                    agent_to_team[agent_name] = team_list[i]
+                else:
+                    agent_to_team[agent_name] = "unknown"
 
         return agent_to_team
 
