@@ -25,3 +25,4 @@ class EvaluationCriteria:
     ranking_type: RankingType
     applicable_games: list[int]
     category: CriteriaCategory
+    order: int = 0

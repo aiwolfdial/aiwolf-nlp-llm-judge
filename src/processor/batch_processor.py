@@ -176,6 +176,11 @@ class BatchProcessor:
                 criteria.name: criteria.description for criteria in evaluation_config
             }
 
+            # criteria_name -> order のマッピングを作成
+            criteria_name_to_order = {
+                criteria.name: criteria.order for criteria in evaluation_config
+            }
+
             aggregator = TeamAggregator()
 
             # 各評価結果辞書をTeamAggregatorに変換して追加
@@ -189,15 +194,20 @@ class BatchProcessor:
             team_averages = aggregator.calculate_team_averages()
             team_counts = aggregator.get_team_count_by_criteria()
 
-            # criteria_name を description に変換
+            # criteria_name を description に変換し、orderでソート
             def convert_criteria_names_to_descriptions(
                 data: dict[str, dict[str, Any]],
             ) -> dict[str, dict[str, Any]]:
-                """criteria_name を description に変換"""
+                """criteria_name を description に変換し、orderでソート"""
                 converted = {}
                 for team, criteria_dict in data.items():
+                    # criteria_nameをorderでソートしてからdescriptionに変換
+                    sorted_criteria = sorted(
+                        criteria_dict.items(),
+                        key=lambda x: criteria_name_to_order.get(x[0], 999),
+                    )
                     converted[team] = {}
-                    for criteria_name, value in criteria_dict.items():
+                    for criteria_name, value in sorted_criteria:
                         description = criteria_name_to_description.get(
                             criteria_name, criteria_name
                         )
@@ -212,15 +222,33 @@ class BatchProcessor:
                 team_counts
             )
 
+            # summaryの評価基準もorderでソート
+            criteria_evaluated = []
+            if team_averages_with_descriptions:
+                first_team_criteria = next(
+                    iter(team_averages_with_descriptions.values()), {}
+                )
+                # descriptionからcriteria_nameに逆変換してソート
+                description_to_criteria_name = {
+                    v: k for k, v in criteria_name_to_description.items()
+                }
+                criteria_with_order = []
+                for description in first_team_criteria.keys():
+                    criteria_name = description_to_criteria_name.get(
+                        description, description
+                    )
+                    order = criteria_name_to_order.get(criteria_name, 999)
+                    criteria_with_order.append((order, description))
+
+                criteria_evaluated = [desc for _, desc in sorted(criteria_with_order)]
+
             aggregation_data = {
                 "team_averages": team_averages_with_descriptions,
                 "team_sample_counts": team_counts_with_descriptions,
                 "summary": {
                     "total_games_processed": len(evaluation_results),
                     "teams_found": list(team_averages_with_descriptions.keys()),
-                    "criteria_evaluated": list(
-                        next(iter(team_averages_with_descriptions.values()), {}).keys()
-                    ),
+                    "criteria_evaluated": criteria_evaluated,
                 },
             }
 

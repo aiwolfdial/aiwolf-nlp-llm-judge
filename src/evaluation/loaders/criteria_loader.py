@@ -126,6 +126,7 @@ class CriteriaLoader:
             name = criteria_dict["name"]
             description = criteria_dict["description"]
             ranking_type = criteria_dict["ranking_type"]
+            order = criteria_dict.get("order", 0)  # デフォルト値0
 
             # 文字列をRankingType enumに変換
             if ranking_type == "ordinal":
@@ -141,6 +142,7 @@ class CriteriaLoader:
                 ranking_type=ranking_type_enum,
                 applicable_games=applicable_games,
                 category=category,
+                order=order,
             )
 
         except KeyError as e:
