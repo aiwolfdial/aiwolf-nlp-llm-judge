@@ -3,7 +3,6 @@
 import logging
 from pathlib import Path
 from typing import Any
-from src.evaluation.models.result import EvaluationResult
 
 from src.aiwolf_log.game_log import AIWolfGameLog
 
@@ -98,7 +97,7 @@ class GameProcessor:
             )
 
             # 7. 評価結果を辞書形式に変換
-            evaluation_dict = self._convert_evaluation_result_to_dict(evaluation_result)
+            evaluation_dict = evaluation_result.to_dict()
 
             logger.info(f"Successfully processed game: {game_log.game_id}")
             return True, evaluation_dict
@@ -112,31 +111,3 @@ class GameProcessor:
                 exc_info=True,
             )
             return False, None
-
-    def _convert_evaluation_result_to_dict(
-        self, evaluation_result: EvaluationResult
-    ) -> dict:
-        """評価結果をプロセス間通信用の辞書形式に変換
-
-        Args:
-            evaluation_result: 評価結果
-
-        Returns:
-            辞書形式の評価結果
-        """
-        evaluation_dict = {"evaluations": {}}
-
-        for criteria_result in evaluation_result:
-            evaluation_dict["evaluations"][criteria_result.criteria_name] = {
-                "rankings": [
-                    {
-                        "player_name": elem.player_name,
-                        "team": elem.team,
-                        "ranking": elem.ranking,
-                        "reasoning": elem.reasoning,
-                    }
-                    for elem in criteria_result
-                ]
-            }
-
-        return evaluation_dict

@@ -29,6 +29,19 @@ class EvaluationResultElement(BaseModel):
             team=team,
         )
 
+    def to_dict(self) -> dict:
+        """要素を辞書形式に変換
+
+        Returns:
+            辞書形式の要素
+        """
+        return {
+            "player_name": self.player_name,
+            "team": self.team,
+            "ranking": self.ranking,
+            "reasoning": self.reasoning,
+        }
+
 
 class CriteriaEvaluationResult(list[EvaluationResultElement]):
     """単一の評価基準に対する結果を表すクラス."""
@@ -73,6 +86,14 @@ class CriteriaEvaluationResult(list[EvaluationResultElement]):
             result_elements.append(result_element)
 
         return cls(criteria_name=criteria_name, elements=result_elements)
+
+    def to_dict(self) -> dict:
+        """評価結果を辞書形式に変換
+
+        Returns:
+            辞書形式の評価結果 {"rankings": [...]}
+        """
+        return {"rankings": [elem.to_dict() for elem in self]}
 
 
 class EvaluationResult(list[CriteriaEvaluationResult]):
@@ -127,6 +148,17 @@ class EvaluationResult(list[CriteriaEvaluationResult]):
             評価基準名のリスト
         """
         return [result.criteria_name for result in self]
+
+    def to_dict(self) -> dict:
+        """評価結果を辞書形式に変換
+
+        Returns:
+            辞書形式の評価結果 {criteria_name: {"rankings": [...]}}
+        """
+        return {
+            criteria_result.criteria_name: criteria_result.to_dict()
+            for criteria_result in self
+        }
 
 
 # 型エイリアス定義
