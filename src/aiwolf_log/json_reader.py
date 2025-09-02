@@ -188,3 +188,11 @@ class AIWolfJSONReader:
                 continue
 
         return agent_to_team
+
+    def get_character_info(self) -> dict[str, str]:
+        """キャラクター情報を取得（get_initialize_profilesのエイリアス）
+
+        Returns:
+            エージェント名をキー、プロフィール文字列を値とする辞書
+        """
+        return self.get_initialize_profiles()
