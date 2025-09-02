@@ -1,7 +1,5 @@
 """バッチ処理を管理するクラス."""
 
-import csv
-import json
 import logging
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -13,6 +11,7 @@ from src.evaluation.models.result import TeamAggregator
 
 from .game_processor import GameProcessor
 from .models import ProcessingConfig, ProcessingResult
+from .pipeline.aggregation_output import AggregationOutputService
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +31,7 @@ class BatchProcessor:
         """
         self.config = config
         self.processing_config = ProcessingConfig.from_config_dict(config)
+        self.aggregation_output = AggregationOutputService()
 
     def process_all_games(self) -> ProcessingResult:
         """すべてのゲームログを並列処理
@@ -189,7 +189,19 @@ class BatchProcessor:
         """
         from src.processor.pipeline import DataPreparationService
 
-        data_prep_service = DataPreparationService(self.config)
+        # settings_pathが存在しない場合はconfigから追加
+        config_with_settings = self.config.copy()
+        if "settings_path" not in config_with_settings:
+            # path.evaluation_criteriaからsettings.yamlのパスを推定
+            criteria_path = Path(
+                self.config.get("path", {}).get(
+                    "evaluation_criteria", "config/evaluation_criteria.yaml"
+                )
+            )
+            settings_path = criteria_path.parent / "settings.yaml"
+            config_with_settings["settings_path"] = str(settings_path)
+
+        data_prep_service = DataPreparationService(config_with_settings)
         evaluation_config = data_prep_service.load_evaluation_config()
 
         return {
@@ -321,20 +333,9 @@ class BatchProcessor:
         Args:
             aggregation_data: 集計データ
         """
-        # JSONファイル保存
-        aggregation_file = self.processing_config.output_dir / "team_aggregation.json"
-        with open(aggregation_file, "w", encoding="utf-8") as f:
-            json.dump(aggregation_data, f, ensure_ascii=False, indent=2)
-        logger.info(f"Team aggregation saved to: {aggregation_file}")
-
-        # CSVファイル保存
-        csv_file = self.processing_config.output_dir / "team_aggregation.csv"
-        self._save_team_aggregation_as_csv(aggregation_data, csv_file)
-        logger.info(f"Team aggregation CSV saved to: {csv_file}")
-
-        # 処理結果ログ出力
-        teams_processed = list(aggregation_data["team_averages"].keys())
-        logger.info(f"Teams processed: {teams_processed}")
+        self.aggregation_output.save_both(
+            aggregation_data, self.processing_config.output_dir
+        )
 
     def _convert_dict_to_evaluation_result(self, evaluation_dict: dict):
         """辞書形式の評価結果をEvaluationResultオブジェクトに変換
@@ -353,9 +354,11 @@ class BatchProcessor:
 
         evaluation_result = EvaluationResult()
 
-        for criteria_name, criteria_data in evaluation_dict.get(
-            "evaluations", {}
-        ).items():
+        # evaluation_dictがevaluationsフィールドを含む場合（個別結果ファイル）と
+        # evaluationsの内容のみの場合（並列処理の戻り値）を判断
+        evaluations_data = evaluation_dict.get("evaluations", evaluation_dict)
+
+        for criteria_name, criteria_data in evaluations_data.items():
             elements = []
             for ranking_data in criteria_data.get("rankings", []):
                 element = EvaluationResultElement(
@@ -372,49 +375,3 @@ class BatchProcessor:
             evaluation_result.append(criteria_result)
 
         return evaluation_result
-
-    def _save_team_aggregation_as_csv(
-        self, aggregation_data: dict, csv_file_path: Path
-    ) -> None:
-        """チーム集計結果をCSV形式で保存
-
-        Args:
-            aggregation_data: JSON出力と同じ構造の集計データ
-            csv_file_path: CSVファイルの保存先パス
-        """
-        try:
-            team_averages = aggregation_data.get("team_averages", {})
-            criteria_evaluated = aggregation_data.get("summary", {}).get(
-                "criteria_evaluated", []
-            )
-
-            if not team_averages or not criteria_evaluated:
-                logger.warning("No team averages data found for CSV output")
-                return
-
-            with open(csv_file_path, "w", encoding="utf-8", newline="") as csvfile:
-                writer = csv.writer(csvfile)
-
-                # ヘッダー行（チーム、各評価基準の平均順位）
-                header = ["Team"]
-                for criteria in criteria_evaluated:
-                    header.append(criteria)
-                writer.writerow(header)
-
-                # 各チームのデータを書き出し
-                for team in sorted(team_averages.keys()):
-                    row = [team]
-
-                    for criteria in criteria_evaluated:
-                        # 平均順位（小数点第6位まで）
-                        avg = team_averages.get(team, {}).get(criteria, 0.0)
-                        row.append(f"{avg:.6f}")
-
-                    writer.writerow(row)
-
-            logger.info(
-                f"CSV data saved with {len(team_averages)} teams and {len(criteria_evaluated)} criteria"
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to save CSV file: {e}", exc_info=True)

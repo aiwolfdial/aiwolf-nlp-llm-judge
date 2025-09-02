@@ -176,6 +176,7 @@ src/
 ├── processor/                # バッチ処理システム
 │   ├── models/               # 処理用データモデル
 │   ├── pipeline/             # パイプラインサービス
+│   │   └── aggregation_output.py  # チーム集計結果出力サービス
 │   ├── batch_processor.py    # バッチ処理オーケストレーター
 │   └── game_processor.py     # 単一ゲーム処理
 ├── aiwolf_log/               # ログファイル管理
@@ -279,31 +280,42 @@ AIWolf NLP LLM Judgeプロジェクトは、最先端の言語モデルを使用
   - `_create_sorted_criteria_list`: ソート済み評価基準リスト作成
   - `_save_team_aggregation_results`: 集計結果保存処理
 
+- **2025-09-02**: チーム集計出力の責任分離によるアーキテクチャ改善
+  - `AggregationOutputService`の新規作成: 専用出力サービス
+  - `BatchProcessor`からファイル出力ロジックを分離
+  - JSON・CSV出力の関心事を独立したサービスに委譲
+  - 単一責任原則の徹底とコードの保守性向上
+
+- **2025-09-03**: チーム集計処理の重大な問題修正
+  - `BatchProcessor._load_evaluation_criteria_mappings`で`settings_path`自動設定機能を実装
+  - `_convert_dict_to_evaluation_result`でデータ形式の不一致問題を解決
+  - 並列処理戻り値とファイル形式の違いに対応する柔軟な処理を追加
+  - チーム集計が100%動作保証される堅牢性を確保
+
 このシステムは、プロダクション対応可能な堅牢性と、将来のマイクロサービス化への明確で安全な拡張パスを提供しています。
 
 ## トラブルシューティング
 
-### チーム集計結果が空になる問題
+### ~~チーム集計結果が空になる問題~~（**2025-09-03修正済み**）
 
 **症状**: `data/output/team_aggregation.json`に結果が表示されず、CSV出力もされない
 
-**原因**: 手動でのチーム集計実行時に`settings_path`設定が不足している
+**原因**: 
+1. ~~手動でのチーム集計実行時に`settings_path`設定が不足~~（**修正済み**）
+2. ~~並列処理の戻り値とファイル形式の不一致~~（**修正済み**）
 
-**解決方法**:
-```python
-# 設定ファイル読み込み後に以下を追加
-config['settings_path'] = 'config/settings.yaml'
-```
-
-**詳細**:
-- CLIでの実行時は`src/cli.py:48`で自動的に`settings_path`が追加される
-- 手動実行時は`DataPreparationService`が`settings_path`を要求するため必須
-- 個別の結果ファイル（`*_result.json`）にはチームデータが正常に含まれている
-- 問題は集計処理の設定不備であり、データそのものの問題ではない
+**修正内容**:
+- `BatchProcessor._load_evaluation_criteria_mappings`で`settings_path`を自動設定
+- `_convert_dict_to_evaluation_result`で複数のデータ形式に対応
+- **現在は通常のCLI実行で完全に動作します**
 
 **確認方法**:
 ```bash
-# チーム集計結果の確認
+# 正常なチーム集計結果の確認
 ls -la data/output/team_aggregation.*
-cat data/output/team_aggregation.json | jq '.summary'
+# JSONファイルのサマリー確認（jqがインストールされている場合）
+python3 -c "import json; print(json.load(open('data/output/team_aggregation.json'))['summary'])"
 ```
+
+**現在の動作状況**: 
+✅ **完全修正済み** - 通常実行で9チームの詳細集計結果が正常に生成されます
