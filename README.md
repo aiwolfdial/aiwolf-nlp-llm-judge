@@ -13,6 +13,7 @@ AIWolfゲームログを生成AI（LLM）で評価するシステム
 - **並列処理**: プロセス・スレッドベースの高速処理
 - **チーム集計**: 複数ゲームの結果を自動集計し、チーム別の平均スコアを算出
 - **構造化出力**: JSON形式での詳細な評価結果とCSV形式での集計結果
+- **集計再生成**: 既存の評価結果から集計のみを再生成（LLM呼び出し不要）
 
 ## インストール
 
@@ -34,6 +35,9 @@ uv run python main.py -c config/settings.yaml
 
 # デバッグモードでの実行
 uv run python main.py -c config/settings.yaml --debug
+
+# 集計再生成モードでの実行（既存の評価結果から集計のみ再生成）
+uv run python main.py -c config/settings.yaml --regenerate-aggregation
 ```
 
 ### データの準備
@@ -49,6 +53,22 @@ data/
 ```
 
 **重要**: ログファイルとJSONファイルは同じ名前（拡張子を除く）である必要があります。
+
+### 集計再生成機能
+
+既存の個別評価結果ファイル（`*_result.json`）から、チーム集計ファイルのみを再生成できます：
+
+```bash
+# チーム集計ファイルが削除された場合の復元
+uv run python main.py -c config/settings.yaml --regenerate-aggregation
+```
+
+この機能は以下の場合に便利です：
+- チーム集計ファイルを誤って削除した場合
+- 集計ロジックを変更して再集計したい場合
+- 個別評価は完了しているが集計のみやり直したい場合
+
+**注意**: `output_dir`に個別評価結果ファイルが存在する必要があります。
 
 ## 設定
 

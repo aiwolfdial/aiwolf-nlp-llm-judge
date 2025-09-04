@@ -26,6 +26,13 @@ def main() -> None:
     # デバッグモードオプション
     parser.add_argument("--debug", action="store_true", help="デバッグモードで実行")
 
+    # 集計再生成モードオプション
+    parser.add_argument(
+        "--regenerate-aggregation",
+        action="store_true",
+        help="既存の評価結果JSONファイルからチーム集計を再生成",
+    )
+
     args = parser.parse_args()
 
     # ロギング設定
@@ -49,11 +56,18 @@ def main() -> None:
 
     # バッチ処理の実行
     processor = BatchProcessor(config)
-    result = processor.process_all_games()
 
-    logging.info(
-        f"処理完了 - 成功: {result.completed}/{result.total}, 成功率: {result.success_rate:.2%}"
-    )
+    if args.regenerate_aggregation:
+        # 集計再生成モード
+        logging.info("既存の評価結果から集計を再生成します...")
+        processor.regenerate_aggregation_only()
+        logging.info("集計の再生成が完了しました")
+    else:
+        # 通常処理モード
+        result = processor.process_all_games()
+        logging.info(
+            f"処理完了 - 成功: {result.completed}/{result.total}, 成功率: {result.success_rate:.2%}"
+        )
 
 
 if __name__ == "__main__":

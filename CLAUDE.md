@@ -26,6 +26,9 @@ uv run python main.py -c config/settings.yaml
 
 # デバッグモードでの実行
 uv run python main.py -c config/settings.yaml --debug
+
+# 集計再生成モードでの実行（既存の評価結果JSONから集計のみ再生成）
+uv run python main.py -c config/settings.yaml --regenerate-aggregation
 ```
 
 ### データファイル配置
@@ -38,6 +41,27 @@ data/
 ```
 
 **重要**: ログファイル（*.log）とJSONファイル（*.json）は、拡張子前の名前が完全一致している必要があります。
+
+### 集計再生成モード
+既存の個別評価結果ファイル（`*_result.json`）から、チーム集計ファイル（`team_aggregation.json`と`team_aggregation.csv`）のみを再生成する機能です。
+
+```bash
+# 使用例：誤って削除したチーム集計ファイルの復元
+uv run python main.py -c config/settings.yaml --regenerate-aggregation
+```
+
+**動作の違い**:
+- **通常モード**: ゲームログを評価 → メモリ上で結果を保持 → 個別結果JSONとチーム集計を同時に生成
+- **集計再生成モード**: 既存の個別結果JSONを読み込み → チーム集計のみを再生成
+
+**使用場面**:
+- チーム集計ファイルを誤って削除した場合の復元
+- 集計ロジックを変更した際の再集計
+- 個別評価は完了しているが集計のみやり直したい場合
+
+**注意事項**:
+- `processing.output_dir`に個別評価結果（`*_result.json`）が存在する必要があります
+- ゲームログの再評価は行わないため、LLM APIを呼び出しません（コスト削減）
 
 ## 設定管理
 
@@ -235,6 +259,7 @@ src/
 10. **日本語表示**: チーム集計結果でのcriteria_name→description自動変換
 11. **評価基準ソート**: orderフィールドによる評価基準の出力順序制御
 12. **CSV出力**: チーム集計結果のCSV形式出力（小数点以下6桁精度）
+13. **集計再生成機能**: 既存の個別評価結果からチーム集計のみを再生成（LLM呼び出し不要）
 
 ## 技術仕様
 
@@ -292,6 +317,12 @@ AIWolf NLP LLM Judgeプロジェクトは、最先端の言語モデルを使用
   - 並列処理戻り値とファイル形式の違いに対応する柔軟な処理を追加
   - チーム集計が100%動作保証される堅牢性を確保
 
+- **2025-09-04**: チーム集計再生成機能の追加
+  - `--regenerate-aggregation`オプションをCLIに追加
+  - `BatchProcessor.regenerate_aggregation_only()`メソッドを実装
+  - 既存の個別評価結果（`*_result.json`）からチーム集計のみを再生成
+  - LLM APIを呼び出さない高速・低コストな集計再生成を実現
+
 このシステムは、プロダクション対応可能な堅牢性と、将来のマイクロサービス化への明確で安全な拡張パスを提供しています。
 
 ## トラブルシューティング
@@ -319,3 +350,18 @@ python3 -c "import json; print(json.load(open('data/output/team_aggregation.json
 
 **現在の動作状況**: 
 ✅ **完全修正済み** - 通常実行で9チームの詳細集計結果が正常に生成されます
+
+### チーム集計ファイルを誤って削除した場合
+
+**症状**: `team_aggregation.json`や`team_aggregation.csv`を誤って削除してしまった
+
+**解決方法**:
+```bash
+# 集計再生成モードで復元
+uv run python main.py -c config/settings.yaml --regenerate-aggregation
+```
+
+**動作**:
+- `output_dir`内の個別評価結果（`*_result.json`）を読み込み
+- チーム集計を再計算して出力
+- LLM APIは呼び出さないため高速かつ低コスト

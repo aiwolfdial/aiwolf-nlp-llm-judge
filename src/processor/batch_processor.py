@@ -1,5 +1,6 @@
 """バッチ処理を管理するクラス."""
 
+import json
 import logging
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -375,3 +376,50 @@ class BatchProcessor:
             evaluation_result.append(criteria_result)
 
         return evaluation_result
+
+    def regenerate_aggregation_only(self) -> None:
+        """既存の評価結果JSONファイルからチーム集計を再生成
+
+        output_dir内の*_result.jsonファイルを読み込み、
+        team_aggregation.jsonとteam_aggregation.csvを再生成する。
+        """
+        logger.info(
+            f"Loading existing evaluation results from {self.processing_config.output_dir}"
+        )
+
+        # 評価結果JSONファイルを検索
+        result_files = list(self.processing_config.output_dir.glob("*_result.json"))
+
+        if not result_files:
+            logger.warning(
+                f"No evaluation result JSON files found in {self.processing_config.output_dir}"
+            )
+            return
+
+        logger.info(f"Found {len(result_files)} evaluation result files")
+
+        # 各JSONファイルを読み込み
+        evaluation_results = []
+        for result_file in result_files:
+            try:
+                with result_file.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    # evaluationsフィールドを取得（ファイル形式）
+                    if "evaluations" in data:
+                        evaluation_results.append(data["evaluations"])
+                        logger.info(f"Loaded: {result_file.name}")
+                    else:
+                        logger.warning(
+                            f"No evaluations field found in {result_file.name}"
+                        )
+            except Exception as e:
+                logger.error(f"Failed to load {result_file.name}: {e}")
+
+        if not evaluation_results:
+            logger.error("No valid evaluation results loaded")
+            return
+
+        logger.info(f"Successfully loaded {len(evaluation_results)} evaluation results")
+
+        # チーム集計を生成
+        self._generate_team_aggregation(evaluation_results)
